@@ -1,0 +1,2 @@
+recursive-include wagtailterms/migrations *
+recursive-include wagtailterms/static *
