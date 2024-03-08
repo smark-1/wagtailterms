@@ -1,12 +1,12 @@
 # Wagtail Terms
-A Wagtail plugin to add support for a glossary terms entity to Draftail
+A Wagtail package to add support for a glossary terms entity to Draftail
 
 ## Installation
 ```bash
 pip install wagtailterms
 ```
-add `wagtailterms` to your `INSTALLED_APPS` in your Django settings file.
-make sure you have rest_framework in your installed apps as well.
+Add `wagtailterms` to your `INSTALLED_APPS` in your Django settings file.
+Make sure you have rest_framework in your installed apps as well.
 
 Migrate the database
 ```bash
@@ -26,3 +26,6 @@ path('api/terms/', include('wagtailterms.urls')),
 The url path can be anything you want. This is the url that will be used to access the terms on the frontend
 
 ---
+
+## Usage
+This wagtail package adds a Draftail entity to create a term and a definition for a word. The most common use case would be for the user to hover over a word on a page and a definition would appear above the word.
