@@ -7,7 +7,6 @@ from wagtail.admin.rich_text.converters.html_to_contentstate import InlineEntity
 from django.utils.safestring import mark_safe
 from wagtail.snippets.models import register_snippet
 from wagtail.snippets.views.snippets import SnippetViewSet
-from django.templatetags.static import static
 
 from .models import Term
 
@@ -17,10 +16,8 @@ TERM_ICON = 'snippet'
 def editor_js():
     # add the path to the terms list view to the javascript so that the url can be set dynamically for the terms api
     path_to_term = reverse('wagtailterms:terms-list')
-    path_to_popup_js = static('wagtailterms/popup-js-1.4.2.js')
     return mark_safe(
             f'<script>const WAGTAIL_TERM_PATH = "{path_to_term}"</script>'
-            f'<script src="{path_to_popup_js}"></script>'
     )
 
 @hooks.register('register_rich_text_features')
@@ -42,7 +39,7 @@ def register_term_feature(features):
     features.register_editor_plugin(
             'draftail', feature_name, draftail_features.EntityFeature(
                     control,
-                    js=['wagtailterms/term.js',"wagtailterms/popperjs.js",'wagtailterms/tippyjs.js']
+                    js=['wagtailterms/popup-js-1.4.2.js','wagtailterms/term.js',"wagtailterms/popperjs.js",'wagtailterms/tippyjs.js']
             )
     )
 

@@ -1,6 +1,5 @@
 from setuptools import setup
 from os import path
-from wagtailterms import __version__
 install_requires = [
     'wagtail>=5.2',
     'djangorestframework>=3.12.0',
@@ -11,6 +10,8 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
+with open(path.join(here, 'VERSION'), encoding='utf-8') as f:
+    __version__ = f.read().strip()
 setup(
     name='wagtailterms',
     version=__version__,
