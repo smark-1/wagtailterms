@@ -1,5 +1,8 @@
+import os
+
 from setuptools import setup
-from os import path
+from os import path, environ
+
 install_requires = [
     'wagtail>=5.2',
     'djangorestframework>=3.12.0',
@@ -14,7 +17,7 @@ with open(path.join(here, 'VERSION'), encoding='utf-8') as f:
     __version__ = f.read().strip()
 setup(
     name='wagtailterms',
-    version=__version__,
+    version=os.environ['RELEASE_VERSION'],
     description='A Wagtail plugin to add support for glossary terms entity to Draftail',
     long_description=long_description,
     long_description_content_type='text/markdown',
