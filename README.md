@@ -8,17 +8,21 @@ pip install wagtailterms
 add `wagtailterms` to your `INSTALLED_APPS` in your Django settings file.
 make sure you have rest_framework in your installed apps as well.
 
+Migrate the database
+```bash
+python manage.py migrate
+```
+
+
 Add `wagtailterms.urls` to your `urlpatterns` in your Django urls file.
 the url should look like this:
 ```python
-    path('api/terms/', include('wagtailterms.urls')),
+path('api/terms/', include('wagtailterms.urls')),
 ```
 
 ---
-**NOTE**
+#### ⚠️ Note
 
 The url path can be anything you want. This is the url that will be used to access the terms on the frontend
 
 ---
-
- run `python manage.py migrate` to create the database tables.
