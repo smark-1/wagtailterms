@@ -5,9 +5,10 @@ from .models import Term
 
 class TermSerializer(serializers.ModelSerializer):
     definition = serializers.SerializerMethodField()
+
     class Meta:
         model = Term
-        fields = ['term', 'definition','id']
+        fields = ["term", "definition", "id"]
 
     def get_definition(self, obj):
         return richtext(obj.definition)
