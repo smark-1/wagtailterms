@@ -1,7 +1,7 @@
 import os
 
 from setuptools import setup
-from os import path, environ
+from os import path
 
 install_requires = [
     'wagtail>=5.2',
