@@ -1,0 +1,28 @@
+{% load wagtailcore_tags wagtailuserbar %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Basic Terms</title>
+</head>
+<body>
+{% wagtailuserbar %}
+<main id="content">
+    {{ page.content|richtext }}
+</main>
+<script>
+    function showterm(e){
+        const termid = e.target.dataset.term
+        fetch(`/api/terms/${termid}/`)
+            .then(response=> response.json())
+            .then(data => {
+                alert(`term = ${data.term} \ndefinition = ${data.definition}`)
+            })
+    }
+
+    for(const term of document.querySelectorAll('[data-term]')){
+        term.onmouseover=showterm;
+    }
+</script>
+</body>
+</html>
