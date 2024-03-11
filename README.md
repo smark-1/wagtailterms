@@ -28,4 +28,104 @@ The url path can be anything you want. This is the url that will be used to acce
 ---
 
 ## Usage
-This wagtail package adds a Draftail entity to create a term and a definition for a word. The most common use case would be for the user to hover over a word on a page and a definition would appear above the word.
+This wagtail package adds a Draftail entity to create a term that is mapped to a definition. The most common use case would be for the user to hover over a word/phrase on a page and a definition would appear next to the word/phrase.
+It allows you to Highlight a word/phrase in the Draftail/richtext editor and search for a definition that was created as a TermSnippet. In the editor the term name and definition will appear on top of the phrase when hovering over the phrase.
+
+To display the terms on the frontend the term shows up as a `<span>` element 
+tag with a green underline and green text. In a future update this will be customizable. 
+The element has a data-term  attribute that contains the term id. It is up to the developer to fetch
+the term and definition to display it. To get the term by id fetch the term by id using the term API.
+
+Rendered HTML of the term in the frontend:
+```html
+<span style="text-decoration-line: underline; text-decoration-color: green;text-decoration-thickness: 3px;color:green;" data-term="1">term 1</span>
+```
+
+The most basic implementation: ([See full example](./example/home/templates/home/basic_page.html))
+```javascript
+function showterm(e){
+    const termid = e.target.dataset.term
+    fetch(`/api/terms/${termid}/`)
+        .then(response=> response.json())
+        .then(data => {
+            alert(`term = ${data.term} \ndefinition = ${data.definition}`)
+        })
+}
+
+for(const term of document.querySelectorAll('[data-term]')){
+    term.onmouseover=showterm;
+}
+```
+
+A more advanced way would be to use a library like [tippy.js](https://atomiks.github.io/tippyjs/) to 
+create a tooltip that appears when hovering over the term. ([See full example](./example/home/templates/home/advanced_page.html))
+```javascript
+function add_tooltips(){
+    const tips = tippy('[data-term]', {
+        content: 'Loading...',
+        allowHTML:true,
+        interactive:true,
+        theme:'light',
+        animation: 'scale-subtle',
+        onCreate(instance) {
+            // Setup our own custom state properties
+            // set if was loaded
+            instance._fetchInitualized = false;
+            instance._error = null;
+        },
+        onShow(instance) {
+            if (instance._fetchInitualized || instance._error) {
+                return;
+            }
+
+            instance._fetchInitualized = true;
+            fetch(`/api/terms/${instance.reference.dataset.term}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.term){
+                        instance.setContent(`<h4>${data.term}</h4><p>${data.definition}</p>`);
+                    }else{
+                        instance.setContent("<p style='color: red'>Could not find definition</p>");
+                    }
+                })
+                .catch(error => {
+                    instance._error = error;
+                    instance.setContent(`Request failed. ${error}`);
+                });
+        },
+    });
+}
+add_tooltips();
+```
+
+## REST API
+`/api/terms/` will return:
+
+    [
+      {
+          "term": "term 1",
+          "definition": "<p data-block-key=\"51h82\">this is term 1</p>",
+          "id": 1
+      },
+        {
+          "term": "example 2",
+          "definition": "<p data-block-key=\"83b17\">this is another example</p>",
+          "id": 2
+      }
+    ]
+
+/api/terms/1/ will return:
+
+    {
+        "term": "term 1",
+        "definition": "<p data-block-key=\"51h82\">this is term 1</p>",
+        "id": 1
+    }
+
+
+
+## To Do
+- Allow icon to be customized
+- Allow frontend styles to be changed
+- Allow menu position to be changed
+- Include a default javascript implementation for frontend
