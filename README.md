@@ -39,15 +39,6 @@ Click in the admin side bar Terms -> Add New
 <p align="center" width="100%">
 <img width="50%" src="./example/images/create_term_2.png">
 </p>
-In the editor it will show like
-
-<p align="center" width="100%">
-<img width="50%" src="./example/images/basic_term_editor_1.png">
-</p>
-
-<p align="center" width="100%">
-<img width="50%" src="./example/images/basic_term_editor_2.png">
-</p>
 
 ### Use term entity in editor
 
@@ -76,6 +67,15 @@ Entity displayed in editor
 <p align="center" width="100%">
 <img width="50%" src="./example/images/add_term_4.png">
 </p>
+
+<p align="center" width="100%">
+<img width="50%" src="./example/images/basic_term_editor_1.png">
+</p>
+
+<p align="center" width="100%">
+<img width="50%" src="./example/images/basic_term_editor_2.png">
+</p>
+
 
 ### Display in template
 To display the terms on the frontend the term shows up as a `<span>` element 
