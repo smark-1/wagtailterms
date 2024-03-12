@@ -33,25 +33,49 @@ It allows you to Highlight a word/phrase in the Draftail/richtext editor and sea
 
 ### Creating new terms
 Click in the admin side bar Terms -> Add New
-![image](./example/images/create_term_1.png)
-![image](./example/images/create_term_2.png)
-
+<p align="center" width="100%">
+<img width="50%" src="./example/images/create_term_1.png">
+</p>
+<p align="center" width="100%">
+<img width="50%" src="./example/images/create_term_2.png">
+</p>
 In the editor it will show like
-![image](./example/images/basic_term_editor_1.png)
-![image](./example/images/basic_term_editor_2.png)
+
+<p align="center" width="100%">
+<img width="50%" src="./example/images/basic_term_editor_1.png">
+</p>
+
+<p align="center" width="100%">
+<img width="50%" src="./example/images/basic_term_editor_2.png">
+</p>
+
 ### Use term entity in editor
-![image](./example/images/add_term_1.png)
+
+<p align="center" width="100%">
+<img width="50%" src="./example/images/add_term_1.png">
+</p>
 
 Search for term
 
-![image](./example/images/add_term_2.png)
-![image](./example/images/search_term.png)
+
+<p align="center" width="100%">
+<img width="50%" src="./example/images/add_term_2.png">
+</p>
+<p align="center" width="100%">
+<img width="50%" src="./example/images/search_term.png">
+</p>
 
 Select term
-![image](./example/images/add_term_3.png)
+
+<p align="center" width="100%">
+<img width="50%" src="./example/images/add_term_3.png">
+</p>
 
 Entity displayed in editor
-![image](./example/images/add_term_4.png)
+
+<p align="center" width="100%">
+<img width="50%" src="./example/images/add_term_4.png">
+</p>
 
 ### Display in template
 To display the terms on the frontend the term shows up as a `<span>` element 
@@ -80,11 +104,15 @@ for(const term of document.querySelectorAll('[data-term]')){
 }
 ```
 The page would look like this:
-![image](./example/images/view_basic_1.png)
+
+<p align="center" width="100%">
+<img width="50%" src="./example/images/view_basic_1.png">
+</p>
 
 On hover
-![image](./example/images/view_basic_2.png)
-
+<p align="center" width="100%">
+<img width="50%" src="./example/images/view_basic_2.png">
+</p>
 
 A more advanced way would be to use a library like [tippy.js](https://atomiks.github.io/tippyjs/) to 
 create a tooltip that appears when hovering over the term. ([See full example](./example/home/templates/home/advanced_page.html))
@@ -127,10 +155,14 @@ function add_tooltips(){
 add_tooltips();
 ```
 The page would look like this:
-![image](./example/images/view_advanced_1.png)
+<p align="center" width="100%">
+<img width="50%" src="./example/images/view_advanced_1.png">
+</p>
 
 On hover
-![image](./example/images/view_advanced_2.png)
+<p align="center" width="100%">
+<img width="50%" src="./example/images/view_advanced_2.png">
+</p>
 
 
 ## REST API
