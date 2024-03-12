@@ -20,9 +20,10 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Set env
+        run: echo "RELEASE_VERSION=0.0.1" >> $GITHUB_ENV
       - name: Install Dependencies
         run: |
-          echo "RELEASE_VERSION=0.0.1" >> $GITHUB_ENV
           pip install Django
           pip install wagtail
           pip install -e .
