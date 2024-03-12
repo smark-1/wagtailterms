@@ -31,6 +31,29 @@ The url path can be anything you want. This is the url that will be used to acce
 This wagtail package adds a Draftail entity to create a term that is mapped to a definition. The most common use case would be for the user to hover over a word/phrase on a page and a definition would appear next to the word/phrase.
 It allows you to Highlight a word/phrase in the Draftail/richtext editor and search for a definition that was created as a TermSnippet. In the editor the term name and definition will appear on top of the phrase when hovering over the phrase.
 
+### Creating new terms
+Click in the admin side bar Terms -> Add New
+![image](./example/images/create_term_1.png)
+![image](./example/images/create_term_2.png)
+
+In the editor it will show like
+![image](./example/images/basic_term_editor_1.png)
+![image](./example/images/basic_term_editor_2.png)
+### Use term entity in editor
+![image](./example/images/add_term_1.png)
+
+Search for term
+
+![image](./example/images/add_term_2.png)
+![image](./example/images/search_term.png)
+
+Select term
+![image](./example/images/add_term_3.png)
+
+Entity displayed in editor
+![image](./example/images/add_term_4.png)
+
+### Display in template
 To display the terms on the frontend the term shows up as a `<span>` element 
 tag with a green underline and green text. In a future update this will be customizable. 
 The element has a data-term  attribute that contains the term id. It is up to the developer to fetch
@@ -56,6 +79,12 @@ for(const term of document.querySelectorAll('[data-term]')){
     term.onmouseover=showterm;
 }
 ```
+The page would look like this:
+![image](./example/images/view_basic_1.png)
+
+On hover
+![image](./example/images/view_basic_2.png)
+
 
 A more advanced way would be to use a library like [tippy.js](https://atomiks.github.io/tippyjs/) to 
 create a tooltip that appears when hovering over the term. ([See full example](./example/home/templates/home/advanced_page.html))
@@ -97,6 +126,12 @@ function add_tooltips(){
 }
 add_tooltips();
 ```
+The page would look like this:
+![image](./example/images/view_advanced_1.png)
+
+On hover
+![image](./example/images/view_advanced_2.png)
+
 
 ## REST API
 `/api/terms/` will return:
@@ -129,3 +164,5 @@ add_tooltips();
 - Allow frontend styles to be changed
 - Allow menu position to be changed
 - Include a default javascript implementation for frontend
+- Support dark mode
+- Fix choose term search form wider than modal
