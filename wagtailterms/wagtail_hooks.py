@@ -9,10 +9,10 @@ from wagtail.admin.rich_text.converters.html_to_contentstate import (
 from django.utils.safestring import mark_safe
 from wagtail.snippets.models import register_snippet
 from wagtail.snippets.views.snippets import SnippetViewSet
-
+from .default_settings import get_setting
 from .models import Term
 
-TERM_ICON = "snippet"
+TERM_ICON = get_setting('icon')
 
 
 @hooks.register("insert_editor_js")

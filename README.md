@@ -27,6 +27,16 @@ The url path can be anything you want. This is the url that will be used to acce
 
 ---
 
+## Settings
+All configurations for wagtailterms are done in the settings.py file in a dictionary called WAGTAILTERMS.
+
+-  icon - The icon for the terms. It is used in the draftail editor and for the viewset. All the icons available for [wagtail](https://docs.wagtail.org/en/latest/advanced_topics/icons.html) are valid options
+```python
+    WAGTAILTERMS = {
+        'icon': 'snippet'
+    }
+```
+
 ## Usage
 This wagtail package adds a Draftail entity to create a term that is mapped to a definition. The most common use case would be for the user to hover over a word/phrase on a page and a definition would appear next to the word/phrase.
 It allows you to Highlight a word/phrase in the Draftail/richtext editor and search for a definition that was created as a TermSnippet. In the editor the term name and definition will appear on top of the phrase when hovering over the phrase.
@@ -192,7 +202,6 @@ On hover
 
 
 ## To Do
-- Allow icon to be customized
 - Allow frontend styles to be changed
 - Allow menu position to be changed
 - Include a default javascript implementation for frontend
