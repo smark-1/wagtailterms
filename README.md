@@ -31,9 +31,11 @@ The url path can be anything you want. This is the url that will be used to acce
 All configurations for wagtailterms are done in the settings.py file in a dictionary called WAGTAILTERMS.
 
 -  icon - The icon for the terms. It is used in the draftail editor and for the viewset. All the icons available for [wagtail](https://docs.wagtail.org/en/latest/advanced_topics/icons.html) are valid options
+- menu_order - Change the position of the terms snippet in the menu.
 ```python
     WAGTAILTERMS = {
-        'icon': 'snippet'
+        'icon': 'snippet',
+        'menu_order': 200
     }
 ```
 
@@ -203,7 +205,6 @@ On hover
 
 ## To Do
 - Allow frontend styles to be changed
-- Allow menu position to be changed
 - Include a default javascript implementation for frontend
 - Support dark mode
 - Fix choose term search form wider than modal

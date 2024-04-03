@@ -119,7 +119,7 @@ class TermViewSet(SnippetViewSet):
     add_to_admin_menu = True
     menu_label = "Terms"
     menu_name = "term"
-    menu_order = 200
+    menu_order = get_setting('menu_order')
 
 
 register_snippet(TermViewSet)
