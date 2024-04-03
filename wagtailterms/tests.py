@@ -1,3 +1,4 @@
+from django.test import override_settings
 from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
 from .models import Term
@@ -69,3 +70,12 @@ class TestTermEntity(APITestCase):
 
             self.assertEqual(wagtail_hooks.get_setting('icon'), 'bin')
 
+    def test_menu_order_works(self):
+        from . import wagtail_hooks
+
+        self.assertEqual(wagtail_hooks.TermViewSet.menu_order, 200)
+
+    @override_settings(WAGTAILTERMS={'menu_order': 900})
+    def test_can_change_menu_order(self):
+        from . import wagtail_hooks
+        self.assertEqual(wagtail_hooks.get_setting('menu_order'), 900)

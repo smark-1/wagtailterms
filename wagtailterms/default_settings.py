@@ -4,7 +4,8 @@ from django.conf import settings
 # term_style
 # menu_position
 DEFAULT_WAGTAILTERMS_SETTINGS = {
-    'icon': 'snippet'
+    'icon': 'snippet',
+    'menu_order': 200
 }
 
 
