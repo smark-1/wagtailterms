@@ -201,7 +201,9 @@ On hover
         "id": 1
     }
 
-
+## Changelog
+### 0.1.1
+- added settings to change the icon and menu order.
 
 ## To Do
 - Allow frontend styles to be changed
