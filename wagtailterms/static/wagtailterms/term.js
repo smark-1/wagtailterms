@@ -3,8 +3,12 @@ const termPopup = new Popup({
     id: "term-selector-popup",
     title: "Choose term",
     allowClose: false,
-    content: `<div style="position: relative">
-    <button style="position: absolute;top:-80px;right:0;background-color: white" id="term-selector-popup-close">X</button>
+    backgroundColor:'var(--w-color-surface-field)',
+    textColor:'var(--w-text-context)',
+    titleColor:'var(--w-text-label)',
+    borderColor:'var(--w-color-border-furniture)',
+    content: `<div style="position: relative;">
+    <button style="position: absolute;top:-80px;right:0;background-color: var(--w-color-surface-field)" id="term-selector-popup-close">X</button>
     <label for="term-selector-popup-search-box">Find Term</label><br>
     <input type="search" name="fname" id="term-selector-popup-search-box" style="width: 100%; width: -moz-available; width: -webkit-fill-available; width: fill-available;">
     <div id="term-selector-popup-search-buttons-frame"></div>
@@ -104,7 +108,9 @@ class TermSource extends window.React.Component {
                     this.setState({terms: data})
                     frame.innerHTML = "";
                     for (const item of data) {
-                        frame.innerHTML += `<button data-term-id="${item.id}">${item.term}</button>`
+                        const button_style = 'background-color: var(--w-color-surface-button-default); color:var(--w-color-text-button); margin: 5px;'
+                        const update_hover_colors = "onMouseOver=\"this.style.backgroundColor='var(--w-color-surface-button-hover)'\" onMouseOut=\"this.style.backgroundColor='var(--w-color-surface-button-default)'"
+                        frame.innerHTML += `<button data-term-id="${item.id}" style="${button_style}" ${update_hover_colors}">${item.term}</button>`
                     }
                     for (const button of frame.children) {
                         button.onclick = this.handleSetTerm
