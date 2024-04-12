@@ -207,8 +207,8 @@ On hover
 
 ### 0.1.2
 - fixed term search form wider than modal
+- Add dark mode support
 
 ## To Do
 - Allow frontend styles to be changed
 - Include a default javascript implementation for frontend
-- Support dark mode
