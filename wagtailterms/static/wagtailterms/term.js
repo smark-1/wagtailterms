@@ -4,9 +4,9 @@ const termPopup = new Popup({
     title: "Choose term",
     allowClose: false,
     content: `<div style="position: relative">
-    <button style="position: absolute;top:-100px;right:0;background-color: white" id="term-selector-popup-close">X</button>
+    <button style="position: absolute;top:-80px;right:0;background-color: white" id="term-selector-popup-close">X</button>
     <label for="term-selector-popup-search-box">Find Term</label><br>
-    <input type="search" name="fname" id="term-selector-popup-search-box">
+    <input type="search" name="fname" id="term-selector-popup-search-box" style="width: 100%; width: -moz-available; width: -webkit-fill-available; width: fill-available;">
     <div id="term-selector-popup-search-buttons-frame"></div>
     </div>
     `,
