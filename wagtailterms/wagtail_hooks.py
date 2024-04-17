@@ -73,7 +73,7 @@ def term_entity_decorator(props):
     return DOM.create_element(
         "span",
         {
-            "style": "text-decoration-line: underline; text-decoration-color: green;text-decoration-thickness: 3px;color:green;",
+            "style": get_setting('style'),
             "data-term": props["term"]["id"],
         },
         props["children"],
