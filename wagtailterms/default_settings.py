@@ -5,7 +5,8 @@ from django.conf import settings
 # menu_position
 DEFAULT_WAGTAILTERMS_SETTINGS = {
     'icon': 'snippet',
-    'menu_order': 200
+    'menu_order': 200,
+    'style': "text-decoration-line: underline; text-decoration-color: green;text-decoration-thickness: 3px;color:green;"
 }
 
 
