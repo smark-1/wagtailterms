@@ -19,7 +19,8 @@ TERM_ICON = get_setting('icon')
 def editor_js():
     # add the path to the terms list view to the javascript so that the url can be set dynamically for the terms api
     path_to_term = reverse("wagtailterms:terms-list")
-    return mark_safe(f'<script>const WAGTAIL_TERM_PATH = "{path_to_term}"; const WAGTAIL_TERM_STYLE = "{get_setting('style')}"</script>')
+    wagtail_term_styles = get_setting('style')
+    return mark_safe(f'<script>const WAGTAIL_TERM_PATH = "{path_to_term}"; const WAGTAIL_TERM_STYLE = "{wagtail_term_styles}"</script>')
 
 
 @hooks.register("register_rich_text_features")
