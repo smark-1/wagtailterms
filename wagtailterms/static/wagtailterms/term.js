@@ -177,15 +177,25 @@ class Term extends window.React.Component{
         //     {props.children}
         // </span>
 
+        // converting a string to camel case so that the same styles can be used in the editor and the frontend with no duplication.
+        // this helps when changing the style setting so that it looks the same in the admin and frontend.
+        // https://stackoverflow.com/a/42124821
+        const convertToCamel=(string)=>{
+            const camelize = (string) =>  string.replace(/-([a-z])/gi,(s, group) =>  group.toUpperCase());
+            const style2object = (style) => style.split(';').filter(s => s.length)
+                .reduce((a, b) => {
+                    const keyValue = b.split(':');
+                    a[camelize(keyValue[0])] = keyValue[1] ;
+                    return a;
+                } ,{});
+            return style2object(string)
+        };
+
         return window.React.createElement("span", {
-        id: `term_${this.state.term.id}_${this.state.randomString}`,
-        style: {
-            textDecorationLine: "underline",
-            textDecorationColor: "green",
-            textDecorationThickness: 3,
-            color: "green"
-        },
-        children: this.props.children
+            id: `term_${this.state.term.id}_${this.state.randomString}`,
+            // WAGTAIL_TERM_STYLE is injected in wagtail_hooks file. This is the style set for the term as a string.
+            style:convertToCamel(WAGTAIL_TERM_STYLE),
+            children: this.props.children
     })
     }
 }
