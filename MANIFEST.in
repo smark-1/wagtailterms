@@ -1,2 +1,3 @@
 recursive-include wagtailterms/migrations *
 recursive-include wagtailterms/static *
+recursive-include wagtailterms/templates *

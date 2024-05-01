@@ -102,8 +102,18 @@ Rendered HTML of the term in the frontend:
 ```html
 <span style="text-decoration-line: underline; text-decoration-color: green;text-decoration-thickness: 3px;color:green;" data-term="1">term 1</span>
 ```
+ℹ️ Above is the default style but this can be modified in the settings.
 
-The most basic implementation: ([See full example](./example/home/templates/home/basic_page.html))
+#### Quick implementation: ([See full example](./example/home/templates/home/quick_start.html))
+
+Include in the template at the bottom of the page template.
+```html
+...
+{% include 'wagtailterms/wagtailterms.html' %}
+```
+ℹ️  This loads the advanced implementation in page template.
+
+#### The most basic implementation: ([See full example](./example/home/templates/home/basic_page.html))
 ```javascript
 function showterm(e){
     const termid = e.target.dataset.term
@@ -129,7 +139,7 @@ On hover
 <img width="50%" src="./example/images/view_basic_2.png">
 </p>
 
-A more advanced way would be to use a library like [tippy.js](https://atomiks.github.io/tippyjs/) to 
+#### A more advanced way would be to use a library like [tippy.js](https://atomiks.github.io/tippyjs/) to 
 create a tooltip that appears when hovering over the term. ([See full example](./example/home/templates/home/advanced_page.html))
 ```javascript
 function add_tooltips(){
@@ -214,6 +224,4 @@ On hover
 
 ### 0.1.3
 - Added setting to change frontend styles
-
-## To Do
-- Include a default javascript implementation for frontend
+- Added quick start template to include for default frontend implementation
