@@ -224,4 +224,4 @@ On hover
 
 ### 0.1.3
 - Added setting to change frontend styles
-- Added quick start template to include for default frontend implementation
+- Added quick start template for default frontend implementation
