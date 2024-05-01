@@ -1,0 +1,15 @@
+{% load wagtailcore_tags wagtailuserbar %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Basic Terms</title>
+</head>
+<body>
+{% wagtailuserbar %}
+<main id="content">
+    {{ page.content|richtext }}
+</main>
+{% include 'wagtailterms/wagtailterms.html' %}
+</body>
+</html>
