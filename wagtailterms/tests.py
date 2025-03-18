@@ -60,7 +60,6 @@ class TestTermEntity(APITestCase):
                 f"{reverse('wagtailterms:terms-list')}?q=Test Term 2"
         )
         self.assertEqual(response.status_code, 200)
-        print(response.status_code, response.data)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["term"], "Test Term 2")
 
