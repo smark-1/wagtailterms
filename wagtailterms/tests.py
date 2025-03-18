@@ -12,23 +12,26 @@ class TestTermEntity(APITestCase):
                 "admin", password="pass"
         )
         cls.normal_user = get_user_model().objects.create_user("user", password="pass")
-        cls.term1 = Term.objects.create(
-                term="Test Term", definition="Test Definition", live=True
-        )
-        cls.term2 = Term.objects.create(
-                term="Test Term 2", definition="Test Definition 2", live=True
-        )
-        cls.term3 = Term.objects.create(
-                term="Test Term 3", definition="Test Definition 3", live=True
-        )
 
-        # not live terms should not be visible to non staff
-        cls.term4 = Term.objects.create(
-                term="Test Term 4", definition="Test Definition 4", live=False
-        )
-        cls.term5 = Term.objects.create(
-                term="Test Term 5", definition="Test Definition 5", live=False
-        )
+        with cls.captureOnCommitCallbacks(execute=True):  # Fixes issue with wagtail 6.4 do to "Background tasks run
+            # at end of current transaction" https://docs.wagtail.org/en/latest/releases/6.4.html#background-tasks-run-at-end-of-current-transaction
+            cls.term1 = Term.objects.create(
+                    term="Test Term", definition="Test Definition", live=True
+            )
+            cls.term2 = Term.objects.create(
+                    term="Test Term 2", definition="Test Definition 2", live=True
+            )
+            cls.term3 = Term.objects.create(
+                    term="Test Term 3", definition="Test Definition 3", live=True
+            )
+
+            # not live terms should not be visible to non staff
+            cls.term4 = Term.objects.create(
+                    term="Test Term 4", definition="Test Definition 4", live=False
+            )
+            cls.term5 = Term.objects.create(
+                    term="Test Term 5", definition="Test Definition 5", live=False
+            )
 
     def test_can_view_term(self):
         """test that a term can be viewed with the rest api"""
