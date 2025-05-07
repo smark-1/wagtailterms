@@ -13,7 +13,6 @@ Migrate the database
 python manage.py migrate
 ```
 
-
 Add `wagtailterms.urls` to your `urlpatterns` in your Django urls file.
 the url should look like this:
 ```python
@@ -63,7 +62,6 @@ Click in the admin side bar Terms -> Add New
 
 Search for term
 
-
 <p align="center" width="100%">
 <img width="50%" src="./example/images/add_term_2.png">
 </p>
@@ -91,6 +89,26 @@ Entity displayed in editor
 <img width="50%" src="./example/images/basic_term_editor_2.png">
 </p>
 
+### Using Tags
+Terms can be tagged to help organize and filter them. When creating or editing a term, you can add tags to categorize it. In the term selector popup, you can:
+
+1. Filter terms by tags using the "Filter by Tags" input
+2. Search for tags by typing in the tag filter box
+3. Select multiple tags to filter terms that have all selected tags
+4. Remove tags by clicking on the tag chips
+
+When hovering over a term in both the editor and frontend, tags will be displayed in the tooltip along with the term definition.
+
+The REST API responses now include tags for each term:
+
+```json
+{
+    "term": "example term",
+    "definition": "<p>Definition here</p>",
+    "id": 1,
+    "tags": ["category1", "category2"]
+}
+```
 
 ### Display in template
 To display the terms on the frontend the term shows up as a `<span>` element 
@@ -189,7 +207,6 @@ On hover
 <img width="50%" src="./example/images/view_advanced_2.png">
 </p>
 
-
 ## REST API
 `/api/terms/` will return:
 
@@ -225,3 +242,9 @@ On hover
 ### 0.1.3
 - Added setting to change frontend styles
 - Added quick start template for default frontend implementation
+
+### 0.2.0
+- Added tags support for terms
+- Added tag filtering in term selector
+- Added tags display in tooltips
+- Updated REST API to include tags in responses

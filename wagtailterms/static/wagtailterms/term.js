@@ -9,18 +9,30 @@ const termPopup = new Popup({
     borderColor:'var(--w-color-border-furniture)',
     content: `<div style="position: relative;">
     <button style="position: absolute;top:-80px;right:0;background-color: var(--w-color-surface-field)" id="term-selector-popup-close">X</button>
-    <label for="term-selector-popup-search-box">Find Term</label><br>
-    <input type="search" name="fname" id="term-selector-popup-search-box" style="width: 100%; width: -moz-available; width: -webkit-fill-available; width: fill-available;">
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <div style="flex: 1;">
+            <label for="term-selector-popup-search-box">Find Term</label><br>
+            <input type="search" name="fname" id="term-selector-popup-search-box" style="width: 100%; width: -moz-available; width: -webkit-fill-available; width: fill-available;">
+        </div>
+        <div style="width: 200px; position: relative;">
+            <label for="term-selector-popup-tag-filter">Filter by Tags</label><br>
+            <input type="text" id="term-selector-popup-tag-filter" placeholder="Search tags..." style="width: 100%; height: 36px;">
+            <div id="tag-selected-list" style="margin-top: 5px; max-height: 60px; overflow-y: auto; font-size: 12px;"></div>
+            <div id="tag-suggestions" style="display: none; position: absolute; width: 100%; max-height: 200px; overflow-y: auto; background: var(--w-color-surface-field); border: 1px solid var(--w-color-border-furniture); border-top: none; z-index: 1000;"></div>
+        </div>
+    </div>
     <div id="term-selector-popup-search-buttons-frame"></div>
     </div>
     `,
 });
 
-
-
 // Not a real React component – just creates the entities as soon as it is rendered.
 class TermSource extends window.React.Component {
-    state = {terms: []}
+    state = {
+        terms: [],
+        selectedTags: new Set(),
+        tagSuggestions: []
+    }
 
     // close window and cancel user adding a term
     handleClose = (e) => {
@@ -30,6 +42,7 @@ class TermSource extends window.React.Component {
         // Draftail requires that must set editor state
         onComplete(editorState);
     }
+
     handleSetTerm = (e) => {
         // get the term id
         const termId = parseInt(e.target.dataset.termId)
@@ -57,7 +70,7 @@ class TermSource extends window.React.Component {
         const contentWithEntity = content.createEntity(
             entityType.type,
             'MUTABLE',
-            {text: current_selected_text, term: term, id: this.state.id},
+            {text: current_selected_text, term: term, id: this.state.id, tags: term.tags},
         );
 
         // add text in position of the old text. If no text was selected put the text of the term.
@@ -80,7 +93,148 @@ class TermSource extends window.React.Component {
         onComplete(nextState);
     }
 
+    handleTagSelect = (tag) => {
+        const selectedTags = new Set(this.state.selectedTags);
+        if (selectedTags.has(tag.name)) {
+            selectedTags.delete(tag.name);
+        } else {
+            selectedTags.add(tag.name);
+        }
+        
+        this.setState({ selectedTags });
+        this.updateSelectedTagsDisplay();
+        this.getSearchTerms();
+        
+        // Clear search input and show updated suggestions
+        const tagInput = document.getElementById("term-selector-popup-tag-filter");
+        tagInput.value = '';
+        this.loadInitialTags();
+    }
+
+    updateSelectedTagsDisplay = () => {
+        const selectedList = document.getElementById("tag-selected-list");
+        selectedList.innerHTML = Array.from(this.state.selectedTags).map(tag => `
+            <div style="display: inline-block; background: var(--w-color-surface-button-default); color: var(--w-color-text-button); 
+                        padding: 2px 6px; margin: 2px; border-radius: 4px; cursor: pointer;"
+                 onclick="this.remove(); window.lastTermSource.handleTagSelect({name: '${tag}'})">
+                ${tag} ✕
+            </div>
+        `).join('');
+    }
+
+    searchTags = (query) => {
+        fetch(`${WAGTAIL_TERM_PATH}tags/?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(tags => {
+                const suggestionsDiv = document.getElementById("tag-suggestions");
+                // Filter out already selected tags
+                const availableTags = tags.filter(tag => !this.state.selectedTags.has(tag.name));
+                
+                if (availableTags.length > 0) {
+                    suggestionsDiv.innerHTML = availableTags
+                        .map(tag => `
+                            <div class="tag-suggestion" style="padding: 8px; cursor: pointer;" data-tag-name="${tag.name}">
+                                ${tag.name} <small>(${tag.count})</small>
+                            </div>
+                        `)
+                        .join('');
+                    suggestionsDiv.style.display = "block";
+
+                    // Add click handlers for suggestions
+                    const suggestions = suggestionsDiv.getElementsByClassName("tag-suggestion");
+                    Array.from(suggestions).forEach(suggestion => {
+                        suggestion.addEventListener('mouseover', () => {
+                            suggestion.style.backgroundColor = 'var(--w-color-surface-button-hover)';
+                        });
+                        suggestion.addEventListener('mouseout', () => {
+                            suggestion.style.backgroundColor = 'var(--w-color-surface-field)';
+                        });
+                        suggestion.addEventListener('click', () => this.handleTagSelect({
+                            name: suggestion.dataset.tagName
+                        }));
+                    });
+                } else {
+                    suggestionsDiv.style.display = "none";
+                }
+            });
+    }
+
+    // function to search for terms that match the search text and selected tag
+    getSearchTerms = () => {
+        const searchBox = document.getElementById("term-selector-popup-search-box");
+        const frame = document.getElementById("term-selector-popup-search-buttons-frame");
+        
+        // Build URL with search and tag parameters
+        let url = `${WAGTAIL_TERM_PATH}?q=${searchBox.value}`;
+        if (this.state.selectedTags.size > 0) {
+            const tags = Array.from(this.state.selectedTags);
+            url += tags.map(tag => `&tags[]=${encodeURIComponent(tag)}`).join('');
+        }
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                this.setState({ terms: data });
+
+                frame.innerHTML = "";
+                for (const item of data) {
+                    const button_style = 'background-color: var(--w-color-surface-button-default); color:var(--w-color-text-button); margin: 5px;'
+                    const update_hover_colors = "onMouseOver=\"this.style.backgroundColor='var(--w-color-surface-button-hover)'\" onMouseOut=\"this.style.backgroundColor='var(--w-color-surface-button-default)'\""
+                    const tags = item.tags && item.tags.length > 0 
+                        ? `<small style="display: block; opacity: 0.8;">${item.tags.join(', ')}</small>` 
+                        : '';
+                    frame.innerHTML += `
+                        <button data-term-id="${item.id}" style="${button_style}" ${update_hover_colors}>
+                            ${item.term}${tags}
+                        </button>`
+                }
+                for (const button of frame.children) {
+                    button.onclick = this.handleSetTerm
+                }
+            })
+    };
+
+    loadInitialTags = () => {
+        fetch(`${WAGTAIL_TERM_PATH}tags/`)
+            .then(response => response.json())
+            .then(tags => {
+                const suggestionsDiv = document.getElementById("tag-suggestions");
+                // Filter out already selected tags
+                const availableTags = tags.filter(tag => !this.state.selectedTags.has(tag.name));
+                
+                if (availableTags.length > 0) {
+                    suggestionsDiv.innerHTML = availableTags
+                        .slice(0, 20)
+                        .map(tag => `
+                            <div class="tag-suggestion" style="padding: 8px; cursor: pointer;" data-tag-name="${tag.name}">
+                                ${tag.name} <small>(${tag.count})</small>
+                            </div>
+                        `)
+                        .join('');
+
+                    // Add click handlers for suggestions
+                    const suggestions = suggestionsDiv.getElementsByClassName("tag-suggestion");
+                    Array.from(suggestions).forEach(suggestion => {
+                        suggestion.addEventListener('mouseover', () => {
+                            suggestion.style.backgroundColor = 'var(--w-color-surface-button-hover)';
+                        });
+                        suggestion.addEventListener('mouseout', () => {
+                            suggestion.style.backgroundColor = 'var(--w-color-surface-field)';
+                        });
+                        suggestion.addEventListener('click', () => this.handleTagSelect({
+                            name: suggestion.dataset.tagName
+                        }));
+                    });
+                } else {
+                    suggestionsDiv.style.display = "none";
+                }
+            });
+    }
+
     componentDidMount() {
+        // Store reference for tag chip removal
+        window.lastTermSource = this;
+        
         // open the term selector popup
         termPopup.show();
 
@@ -90,8 +244,8 @@ class TermSource extends window.React.Component {
 
         // get the selected text
         const searchBox = document.getElementById("term-selector-popup-search-box");
-        const frame = document.getElementById("term-selector-popup-search-buttons-frame");
-        const {editorState, entityType, onComplete} = this.props;
+        const tagInput = document.getElementById("term-selector-popup-tag-filter");
+        const {editorState} = this.props;
         const content = editorState.getCurrentContent();
         const selection = editorState.getSelection();
         const anchorKey = selection.getAnchorKey();
@@ -99,35 +253,45 @@ class TermSource extends window.React.Component {
         const end = selection.getEndOffset()
         const current_selected_text = content.getBlockForKey(anchorKey).getText().slice(start, end)
 
-        // function to search for terms that match the search text. All matches get added as a button in popup.
-        // if button is clicked will set the term to button
-        const getSearchTerms = () => {
-            fetch(`${WAGTAIL_TERM_PATH}?q=${searchBox.value}`)
-                .then(response => response.json())
-                .then(data => {
-                    this.setState({terms: data})
-                    frame.innerHTML = "";
-                    for (const item of data) {
-                        const button_style = 'background-color: var(--w-color-surface-button-default); color:var(--w-color-text-button); margin: 5px;'
-                        const update_hover_colors = "onMouseOver=\"this.style.backgroundColor='var(--w-color-surface-button-hover)'\" onMouseOut=\"this.style.backgroundColor='var(--w-color-surface-button-default)'"
-                        frame.innerHTML += `<button data-term-id="${item.id}" style="${button_style}" ${update_hover_colors}">${item.term}</button>`
-                    }
-                    for (const button of frame.children) {
-                        button.onclick = this.handleSetTerm
-                    }
-                })
-        };
-
         // set the searchbox text to selected text
         searchBox.value = current_selected_text;
 
-        // update search while the user types
-        searchBox.onkeyup = (e) => {
-            getSearchTerms();
-        }
+        // Handle tag input
+        let tagDebounceTimer;
+        tagInput.addEventListener('focus', () => {
+            if (!tagInput.value) {
+                this.loadInitialTags();
+                document.getElementById("tag-suggestions").style.display = "block";
+            }
+        });
 
-        // run the search initially
-        getSearchTerms();
+        tagInput.addEventListener('input', (e) => {
+            clearTimeout(tagDebounceTimer);
+            if (e.target.value === '') {
+                this.loadInitialTags();
+                document.getElementById("tag-suggestions").style.display = "block";
+            } else {
+                tagDebounceTimer = setTimeout(() => {
+                    this.searchTags(e.target.value);
+                    document.getElementById("tag-suggestions").style.display = "block";
+                }, 300);
+            }
+        });
+
+        // Close tag suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#term-selector-popup-tag-filter') && 
+                !e.target.closest('#tag-suggestions')) {
+                document.getElementById("tag-suggestions").style.display = "none";
+            }
+        });
+
+        // update search while the user types
+        searchBox.onkeyup = this.getSearchTerms;
+
+        // run the search initially and load tags without showing them
+        this.loadInitialTags();
+        this.getSearchTerms();
     }
 
     render() {
@@ -155,7 +319,10 @@ class Term extends window.React.Component{
     componentDidMount(){
         tippy(document.getElementById(`term_${this.state.term.id}_${this.state.randomString}`),
         {
-            content: `<h4 style="color: white">${this.state.term.term}</h4><p>${this.state.term.definition}</p>`,
+            content: `<h4 style="color: white">${this.state.term.term}</h4>
+                 ${this.state.term.tags && this.state.term.tags.length > 0 ? 
+                   `<p><small>Tags: ${this.state.term.tags.join(', ')}</small></p>` : ''}
+                 <p>${this.state.term.definition}</p>`,
             allowHTML: true,
             interactive: true,
             appendTo: () => document.body, theme: 'light-border'

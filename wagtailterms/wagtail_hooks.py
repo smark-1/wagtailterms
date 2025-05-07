@@ -62,6 +62,7 @@ def register_term_feature(features):
                 "span[data-term]": TermEntityElementHandler(type_)
             },
             "to_database_format": {"entity_decorators": {type_: term_entity_decorator}},
+            
         },
     )
 
@@ -100,6 +101,7 @@ class TermEntityElementHandler(InlineEntityElementHandler):
                     "term": term.term,
                     "definition": term.definition,
                     "id": term.id,
+                    "tags": list(term.tags.names()),
                 }
             }
         except Term.DoesNotExist:
@@ -108,6 +110,7 @@ class TermEntityElementHandler(InlineEntityElementHandler):
                     "term": "<span style='color:red'>Term Not Found</span>",
                     "definition": "<i>This term might be deleted</i>",
                     "id": 0,
+                    "tags": [],
                 }
             }
 
@@ -115,7 +118,11 @@ class TermEntityElementHandler(InlineEntityElementHandler):
 class TermViewSet(SnippetViewSet):
     model = Term
 
-    panels = [FieldPanel("term"), FieldPanel("definition")]
+    panels = [
+        FieldPanel("term"),
+        FieldPanel("definition"),
+        FieldPanel("tags"),
+    ]
     icon = TERM_ICON
     add_to_admin_menu = True
     menu_label = "Terms"
