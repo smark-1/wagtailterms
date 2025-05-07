@@ -24,7 +24,12 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.term){
-                            instance.setContent(`<h4>${data.term}</h4><p>${data.definition}</p>`);
+                            instance.setContent(`
+                                <h4>${data.term}</h4>
+                                ${data.tags && data.tags.length > 0 ? 
+                                  `<p><small>Tags: ${data.tags.join(', ')}</small></p>` : ''}
+                                <p>${data.definition}</p>
+                            `);
                         }else{
                             instance.setContent("<p style='color: red'>Could not find definition</p>");
                         }
