@@ -15,7 +15,7 @@ class TermSource extends window.React.Component {
                     <svg class="icon icon-cross" aria-hidden="true"><use href="#icon-cross"></use></svg>
                     Close
                 </button>
-                <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+                <div class="modal-body">
                     <header class="w-header w-header--merged">
                         <div class="row">
                             <div class="left">
@@ -52,9 +52,8 @@ class TermSource extends window.React.Component {
                                                 <div class="w-field__input">
                                                     <input type="text" id="term-selector-popup-search-box" class="w-field__textinput" placeholder="Search">
                                                 </div>
-                                                <div id="term-selector-popup-search-buttons-frame" class="listing results"></div>
-
                                             </div>
+                                            <div id="term-selector-popup-search-buttons-frame" class="listing results" style="min-height: 400px; max-height: 60vh; overflow-y: auto; margin-top: 10px;"></div>
                                         </div>
 
                                         <div class="w-field__wrapper" style="flex: 0 0 300px; max-width: 300px;">
@@ -62,11 +61,10 @@ class TermSource extends window.React.Component {
                                                 <label class="w-field__label">Filter by Tags</label>
                                                 <div class="w-field__input">
                                                     <input type="text" id="term-selector-popup-tag-filter" class="w-field__textinput" placeholder="Search tags...">
-                                                    <div id="tag-list" class="w-field__tags" style="max-height: 700px; overflow-y: auto; margin-top: 8px;"></div>
+                                                    <div id="tag-list" class="w-field__tags" style="min-height: 400px; max-height: 60vh; overflow-y: auto; margin-top: 8px;"></div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
                                 </form>
                             </section>
                         </div>
@@ -106,16 +104,16 @@ class TermSource extends window.React.Component {
     }
 
     handleSetTerm = (e) => {
-        // get the term id from the clicked button
-        const buttonElement = e.target.closest('button');
-        if (!buttonElement) {
-            console.error('Button element not found');
+        // get the term id from the clicked row
+        const rowElement = e.target.closest('tr');
+        if (!rowElement) {
+            console.error('Row element not found');
             return;
         }
 
-        const termId = parseInt(buttonElement.dataset.termId);
+        const termId = parseInt(rowElement.dataset.termId);
         if (isNaN(termId)) {
-            console.error('Invalid term ID:', buttonElement.dataset.termId);
+            console.error('Invalid term ID:', rowElement.dataset.termId);
             return;
         }
 
@@ -243,28 +241,56 @@ class TermSource extends window.React.Component {
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                // Store the terms in state before rendering buttons
+                // Store the terms in state before rendering table
                 this.setState({ terms: data }, () => {
-                    frame.innerHTML = "";
-                    for (const item of data) {
-                        const tags = item.tags && item.tags.length > 0 
-                            ? `<div style="font-size: 0.85em; color: var(--w-color-text-label); background: var(--w-color-surface-field-inactive); display: inline-block; padding: 2px 6px; border-radius: 4px; margin-top: 4px;">${item.tags.join(', ')}</div>` 
-                            : '';
-                        frame.innerHTML += `
-                            <button style="display: block; width: 100%; text-align: left; padding: 8px 12px; margin-bottom: 4px; background: var(--w-color-surface-field); border: 2px solid var(--w-color-border-field); border-radius: 6px; color: var(--w-color-text-context); cursor: pointer; transition: all 0.2s ease;" 
-                                    onmouseover="this.style.backgroundColor = 'var(--w-color-surface-button-hover)'; this.style.borderColor = 'var(--w-color-border-button-hover)'"
-                                    onmouseout="this.style.backgroundColor = 'var(--w-color-surface-field)'; this.style.borderColor = 'var(--w-color-border-field)'"
-                                    onclick="window.lastTermSource.handleSetTerm(event)"
-                                    data-term-id="${item.id}">
-                                <div style="font-weight: 500; margin-bottom: 2px;">${item.term}</div>
-                                ${tags}
-                            </button>`;
-                    }
+                    // Create table structure
+                    const tableHtml = `
+                        <table class="listing" style="width: 100%;">
+                            <thead>
+                                <tr class="table-headers">
+                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 20%;">Term</th>
+                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 50%;">Definition</th>
+                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 30%;">Tags</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.map(item => `
+                                    <tr class="term-row" 
+                                        data-term-id="${item.id}"
+                                        style="cursor: pointer; transition: background-color 0.2s ease;"
+                                        onmouseover="this.style.backgroundColor = 'var(--w-color-surface-button-hover)'"
+                                        onmouseout="this.style.backgroundColor = ''"
+                                        onclick="window.lastTermSource.handleSetTerm(event)">
+                                        <td style="padding: 8px; border-bottom: 1px solid var(--w-color-border-field);">
+                                            <div style="font-weight: 500;">${item.term}</div>
+                                        </td>
+                                        <td style="padding: 8px; border-bottom: 1px solid var(--w-color-border-field); color: var(--w-color-text-context);">
+                                            ${item.definition ? 
+                                                (item.definition.length > 150 ? 
+                                                    item.definition.substring(0, 150) + '...' : 
+                                                    item.definition) : 
+                                                ''}
+                                        </td>
+                                        <td style="padding: 8px; border-bottom: 1px solid var(--w-color-border-field);">
+                                            ${item.tags && item.tags.length > 0 
+                                                ? item.tags.map(tag => 
+                                                    `<span style="display: inline-block; font-size: 0.85em; color: var(--w-color-text-label); background: var(--w-color-surface-field-inactive); padding: 2px 6px; border-radius: 4px; margin: 2px;">${tag}</span>`
+                                                ).join(' ')
+                                                : ''}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>`;
+
+                    frame.innerHTML = data.length > 0 
+                        ? tableHtml 
+                        : '<p style="padding: 8px; color: var(--w-color-text-label);">No terms found</p>';
                 });
             })
             .catch(error => {
                 console.error('Error fetching terms:', error);
-                frame.innerHTML = '<p style="color: red;">Error loading terms</p>';
+                frame.innerHTML = '<p style="color: red; padding: 8px;">Error loading terms</p>';
             });
     };
 
