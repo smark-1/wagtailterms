@@ -62,7 +62,6 @@ def register_term_feature(features):
                 "span[data-term]": TermEntityElementHandler(type_)
             },
             "to_database_format": {"entity_decorators": {type_: term_entity_decorator}},
-            
         },
     )
 
