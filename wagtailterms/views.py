@@ -21,10 +21,11 @@ class TermViewSet(ReadOnlyModelViewSet):
         if not self.request.user.is_staff:
             queryset = queryset.filter(live=True)
             
-        # Apply tag filters if provided
+        # Apply tag filters if provided - require ALL tags to match
         if tags:
             for tag in tags:
-                queryset = queryset.filter(tags__name=tag)
+                queryset = queryset.filter(tagged_terms__tag__name=tag)
+            queryset = queryset.distinct()
             
         # Apply search if provided
         if q:
