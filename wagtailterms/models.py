@@ -18,6 +18,7 @@ class Term(index.Indexed, DraftStateMixin, RevisionMixin, LockableMixin, Cluster
 
     search_fields = [
         index.AutocompleteField("term", partial_match=True),
+        index.FilterField("term"),
         index.FilterField("live"),
     ]
 

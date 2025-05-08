@@ -1,56 +1,131 @@
-// create popup to choose the term. The entire page uses the same popup. This makes it easier to select by id
-const termPopup = new Popup({
-    id: "term-selector-popup",
-    title: "Choose term",
-    allowClose: false,
-    backgroundColor:'var(--w-color-surface-field)',
-    textColor:'var(--w-text-context)',
-    titleColor:'var(--w-text-label)',
-    borderColor:'var(--w-color-border-furniture)',
-    content: `<div style="position: relative;">
-    <button style="position: absolute;top:-80px;right:0;background-color: var(--w-color-surface-field)" id="term-selector-popup-close">X</button>
-    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-        <div style="flex: 1;">
-            <label for="term-selector-popup-search-box">Find Term</label><br>
-            <input type="search" name="fname" id="term-selector-popup-search-box" style="width: 100%; width: -moz-available; width: -webkit-fill-available; width: fill-available;">
-        </div>
-        <div style="width: 200px; position: relative;">
-            <label for="term-selector-popup-tag-filter">Filter by Tags</label><br>
-            <input type="text" id="term-selector-popup-tag-filter" placeholder="Search tags..." style="width: 100%; height: 36px;">
-            <div id="tag-selected-list" style="margin-top: 5px; max-height: 60px; overflow-y: auto; font-size: 12px;"></div>
-            <div id="tag-suggestions" style="display: none; position: absolute; width: 100%; max-height: 200px; overflow-y: auto; background: var(--w-color-surface-field); border: 1px solid var(--w-color-border-furniture); border-top: none; z-index: 1000;"></div>
-        </div>
-    </div>
-    <div id="term-selector-popup-search-buttons-frame"></div>
-    </div>
-    `,
-});
-
 // Not a real React component – just creates the entities as soon as it is rendered.
 class TermSource extends window.React.Component {
     state = {
         terms: [],
         selectedTags: new Set(),
-        tagSuggestions: []
+        tagSuggestions: [],
+        isModalVisible: false
+    }
+
+    modalContent = `
+    <div id="term-selector-modal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true" style="display: none;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <button type="button" class="button close button--icon text-replace w-dialog__close-button" id="term-selector-popup-close">
+                    <svg class="icon icon-cross" aria-hidden="true"><use href="#icon-cross"></use></svg>
+                    Close
+                </button>
+                <div class="modal-body">
+                    <header class="w-header w-header--merged">
+                        <div class="row">
+                            <div class="left">
+                                <div class="col">
+                                    <h1 class="w-header__title" id="header-title">
+                                        <svg class="icon icon-term w-header__glyph" aria-hidden="true">
+                                            <use href="#icon-doc-full-inverse"></use>
+                                        </svg>
+                                        Choose a term
+                                    </h1>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="w-tabs" data-tabs>
+                        <div class="w-tabs__wrapper w-overflow-hidden">
+                            <div role="tablist" class="w-tabs__list w-w-full">
+                                <a id="tab-label-search" href="#tab-search" class="w-tabs__tab" role="tab" aria-selected="true" aria-controls="tab-search">
+                                    Search
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="tab-content">
+                            <section id="tab-search" class="w-tabs__panel" role="tabpanel" aria-labelledby="tab-label-search">
+                                <form class="w-panel w-panel--search" novalidate>
+                                    <div class="w-field__wrapper">
+                                        <div class="w-field w-field--char_field w-field--text_input" data-field>
+                                            <label class="w-field__label" for="term-selector-popup-search-box">
+                                                Search term
+                                            </label>
+                                            <div class="w-field__input">
+                                                <input type="text" id="term-selector-popup-search-box" class="w-field__textinput" placeholder="Search">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="w-field__wrapper">
+                                        <div class="w-field w-field--tag_field w-field--admin_tag_widget" data-field>
+                                            <label class="w-field__label" for="term-selector-popup-tag-filter">
+                                                Filter by Tags
+                                            </label>
+                                            <div class="w-field__input">
+                                                <input type="text" id="term-selector-popup-tag-filter" class="w-field__textinput" placeholder="Search tags...">
+                                                <div id="tag-selected-list" class="tagit w-field__tags"></div>
+                                                <div id="tag-suggestions" class="w-field__suggestions"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+
+                                <div id="term-selector-popup-search-buttons-frame" class="listing results"></div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+
+    showModal = () => {
+        const modal = document.getElementById('term-selector-modal');
+        if (modal) {
+            modal.style.display = 'block';
+            modal.classList.add('in');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('modal-open');
+            this.initializePopup();
+        }
+    }
+
+    hideModal = () => {
+        const modal = document.getElementById('term-selector-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('in');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('modal-open');
+        }
     }
 
     // close window and cancel user adding a term
     handleClose = (e) => {
         const {onComplete, editorState} = this.props;
-        termPopup.hide()
-
+        this.hideModal();
         // Draftail requires that must set editor state
         onComplete(editorState);
     }
 
     handleSetTerm = (e) => {
-        // get the term id
-        const termId = parseInt(e.target.dataset.termId)
-        // get the term from the id
-        const term = this.state.terms.find((term) => term.id === termId)
+        // get the term id from the clicked button
+        const buttonElement = e.target.closest('button');
+        if (!buttonElement) {
+            console.error('Button element not found');
+            return;
+        }
 
-        // close the term popup once term is found
-        termPopup.hide();
+        const termId = parseInt(buttonElement.dataset.termId);
+        if (isNaN(termId)) {
+            console.error('Invalid term ID:', buttonElement.dataset.termId);
+            return;
+        }
+
+        // get the term from the id
+        const term = this.state.terms.find((t) => t.id === termId);
+        if (!term) {
+            console.error('Term not found:', termId);
+            return;
+        }
 
         const {editorState, entityType, onComplete} = this.props;
         const content = editorState.getCurrentContent();
@@ -59,18 +134,14 @@ class TermSource extends window.React.Component {
         // get currently selected text
         const anchorKey = selection.getAnchorKey();
         const start = selection.getStartOffset();
-        const end = selection.getEndOffset()
-        const current_selected_text = content.getBlockForKey(anchorKey).getText().slice(start, end)
-
-        // get the searchbox and insert the value of the highlighted text
-        const searchBox = document.getElementById("term-selector-popup-search-box");
-        searchBox.value = current_selected_text;
+        const end = selection.getEndOffset();
+        const current_selected_text = content.getBlockForKey(anchorKey).getText().slice(start, end);
 
         // Uses the Draft.js API to create a new entity with the right data.
         const contentWithEntity = content.createEntity(
             entityType.type,
             'MUTABLE',
-            {text: current_selected_text, term: term, id: this.state.id, tags: term.tags},
+            {text: current_selected_text, term: term, id: term.id, tags: term.tags},
         );
 
         // add text in position of the old text. If no text was selected put the text of the term.
@@ -88,6 +159,8 @@ class TermSource extends window.React.Component {
             newContent,
             'insert-characters',
         );
+
+        this.hideModal();
 
         // update the editor to show the changes
         onComplete(nextState);
@@ -114,10 +187,12 @@ class TermSource extends window.React.Component {
     updateSelectedTagsDisplay = () => {
         const selectedList = document.getElementById("tag-selected-list");
         selectedList.innerHTML = Array.from(this.state.selectedTags).map(tag => `
-            <div style="display: inline-block; background: var(--w-color-surface-button-default); color: var(--w-color-text-button); 
-                        padding: 2px 6px; margin: 2px; border-radius: 4px; cursor: pointer;"
-                 onclick="this.remove(); window.lastTermSource.handleTagSelect({name: '${tag}'})">
-                ${tag} ✕
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: green; padding: 4px 8px; margin: 2px; border-radius: 4px; font-size: 0.85em; border: 1px solid var(--w-color-border-button); transition: background-color 0.2s ease;">
+                <span style="color: var(--w-color-text-button);">${tag}</span>
+                <span style="color: var(--w-color-text-button); cursor: pointer; opacity: 0.8;" 
+                      onmouseover="this.style.opacity = '1'" 
+                      onmouseout="this.style.opacity = '0.8'"
+                      onclick="window.lastTermSource.handleTagSelect({name: '${tag}'})">✕</span>
             </div>
         `).join('');
     }
@@ -133,26 +208,15 @@ class TermSource extends window.React.Component {
                 if (availableTags.length > 0) {
                     suggestionsDiv.innerHTML = availableTags
                         .map(tag => `
-                            <div class="tag-suggestion" style="padding: 8px; cursor: pointer;" data-tag-name="${tag.name}">
+                            <div style="padding: 8px; cursor: pointer;" data-tag-name="${tag.name}"
+                                 onmouseover="this.style.backgroundColor = 'var(--w-color-surface-button-hover)'"
+                                 onmouseout="this.style.backgroundColor = 'var(--w-color-surface-field)'"
+                                 onclick="window.lastTermSource.handleTagSelect({name: '${tag.name}'})">
                                 ${tag.name} <small>(${tag.count})</small>
                             </div>
                         `)
                         .join('');
                     suggestionsDiv.style.display = "block";
-
-                    // Add click handlers for suggestions
-                    const suggestions = suggestionsDiv.getElementsByClassName("tag-suggestion");
-                    Array.from(suggestions).forEach(suggestion => {
-                        suggestion.addEventListener('mouseover', () => {
-                            suggestion.style.backgroundColor = 'var(--w-color-surface-button-hover)';
-                        });
-                        suggestion.addEventListener('mouseout', () => {
-                            suggestion.style.backgroundColor = 'var(--w-color-surface-field)';
-                        });
-                        suggestion.addEventListener('click', () => this.handleTagSelect({
-                            name: suggestion.dataset.tagName
-                        }));
-                    });
                 } else {
                     suggestionsDiv.style.display = "none";
                 }
@@ -174,24 +238,29 @@ class TermSource extends window.React.Component {
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                this.setState({ terms: data });
-
-                frame.innerHTML = "";
-                for (const item of data) {
-                    const button_style = 'background-color: var(--w-color-surface-button-default); color:var(--w-color-text-button); margin: 5px;'
-                    const update_hover_colors = "onMouseOver=\"this.style.backgroundColor='var(--w-color-surface-button-hover)'\" onMouseOut=\"this.style.backgroundColor='var(--w-color-surface-button-default)'\""
-                    const tags = item.tags && item.tags.length > 0 
-                        ? `<small style="display: block; opacity: 0.8;">${item.tags.join(', ')}</small>` 
-                        : '';
-                    frame.innerHTML += `
-                        <button data-term-id="${item.id}" style="${button_style}" ${update_hover_colors}>
-                            ${item.term}${tags}
-                        </button>`
-                }
-                for (const button of frame.children) {
-                    button.onclick = this.handleSetTerm
-                }
+                // Store the terms in state before rendering buttons
+                this.setState({ terms: data }, () => {
+                    frame.innerHTML = "";
+                    for (const item of data) {
+                        const tags = item.tags && item.tags.length > 0 
+                            ? `<div style="font-size: 0.85em; color: var(--w-color-text-label); background: var(--w-color-surface-field-inactive); display: inline-block; padding: 2px 6px; border-radius: 4px; margin-top: 4px;">${item.tags.join(', ')}</div>` 
+                            : '';
+                        frame.innerHTML += `
+                            <button style="display: block; width: 100%; text-align: left; padding: 8px 12px; margin-bottom: 4px; background: var(--w-color-surface-field); border: 2px solid var(--w-color-border-field); border-radius: 6px; color: var(--w-color-text-context); cursor: pointer; transition: all 0.2s ease;" 
+                                    onmouseover="this.style.backgroundColor = 'var(--w-color-surface-button-hover)'; this.style.borderColor = 'var(--w-color-border-button-hover)'"
+                                    onmouseout="this.style.backgroundColor = 'var(--w-color-surface-field)'; this.style.borderColor = 'var(--w-color-border-field)'"
+                                    onclick="window.lastTermSource.handleSetTerm(event)"
+                                    data-term-id="${item.id}">
+                                <div style="font-weight: 500; margin-bottom: 2px;">${item.term}</div>
+                                ${tags}
+                            </button>`;
+                    }
+                });
             })
+            .catch(error => {
+                console.error('Error fetching terms:', error);
+                frame.innerHTML = '<p style="color: red;">Error loading terms</p>';
+            });
     };
 
     loadInitialTags = () => {
@@ -206,14 +275,18 @@ class TermSource extends window.React.Component {
                     suggestionsDiv.innerHTML = availableTags
                         .slice(0, 20)
                         .map(tag => `
-                            <div class="tag-suggestion" style="padding: 8px; cursor: pointer;" data-tag-name="${tag.name}">
+                            <div style="padding: 8px; cursor: pointer;" data-tag-name="${tag.name}"
+                                 onmouseover="this.style.backgroundColor = 'var(--w-color-surface-button-hover)'"
+                                 onmouseout="this.style.backgroundColor = 'var(--w-color-surface-field)'"
+                                 onclick="window.lastTermSource.handleTagSelect({name: '${tag.name}'})">
                                 ${tag.name} <small>(${tag.count})</small>
                             </div>
                         `)
                         .join('');
+                    suggestionsDiv.style.display = "block";
 
-                    // Add click handlers for suggestions
-                    const suggestions = suggestionsDiv.getElementsByClassName("tag-suggestion");
+                    // Add click handlers for suggestions using the correct class name
+                    const suggestions = suggestionsDiv.getElementsByClassName("term-popup__tag-suggestion");
                     Array.from(suggestions).forEach(suggestion => {
                         suggestion.addEventListener('mouseover', () => {
                             suggestion.style.backgroundColor = 'var(--w-color-surface-button-hover)';
@@ -231,72 +304,99 @@ class TermSource extends window.React.Component {
             });
     }
 
-    componentDidMount() {
-        // Store reference for tag chip removal
-        window.lastTermSource = this;
-        
-        // open the term selector popup
-        termPopup.show();
-
-        // make editor not freeze on close - use custom close button so have to set on click method for it
+    initializePopup = () => {
         const searchClose = document.getElementById("term-selector-popup-close");
-        searchClose.onclick = this.handleClose;
+        if (searchClose) {
+            searchClose.onclick = this.handleClose;
+        }
 
-        // get the selected text
         const searchBox = document.getElementById("term-selector-popup-search-box");
         const tagInput = document.getElementById("term-selector-popup-tag-filter");
-        const {editorState} = this.props;
-        const content = editorState.getCurrentContent();
-        const selection = editorState.getSelection();
-        const anchorKey = selection.getAnchorKey();
-        const start = selection.getStartOffset();
-        const end = selection.getEndOffset()
-        const current_selected_text = content.getBlockForKey(anchorKey).getText().slice(start, end)
 
-        // set the searchbox text to selected text
-        searchBox.value = current_selected_text;
+        if (searchBox) {
+            // Get the selected text
+            const {editorState} = this.props;
+            const content = editorState.getCurrentContent();
+            const selection = editorState.getSelection();
+            const anchorKey = selection.getAnchorKey();
+            const start = selection.getStartOffset();
+            const end = selection.getEndOffset();
+            const current_selected_text = content.getBlockForKey(anchorKey).getText().slice(start, end);
 
-        // Handle tag input
-        let tagDebounceTimer;
-        tagInput.addEventListener('focus', () => {
-            if (!tagInput.value) {
-                this.loadInitialTags();
-                document.getElementById("tag-suggestions").style.display = "block";
-            }
-        });
+            searchBox.value = current_selected_text;
+            searchBox.onkeyup = this.getSearchTerms;
+        }
 
-        tagInput.addEventListener('input', (e) => {
-            clearTimeout(tagDebounceTimer);
-            if (e.target.value === '') {
-                this.loadInitialTags();
-                document.getElementById("tag-suggestions").style.display = "block";
-            } else {
-                tagDebounceTimer = setTimeout(() => {
-                    this.searchTags(e.target.value);
-                    document.getElementById("tag-suggestions").style.display = "block";
-                }, 300);
-            }
-        });
+        if (tagInput) {
+            let tagDebounceTimer;
+            tagInput.addEventListener('focus', () => {
+                if (!tagInput.value) {
+                    this.loadInitialTags();
+                    const suggestions = document.getElementById("tag-suggestions");
+                    if (suggestions) {
+                        suggestions.style.display = "block";
+                    }
+                }
+            });
+
+            tagInput.addEventListener('input', (e) => {
+                clearTimeout(tagDebounceTimer);
+                if (e.target.value === '') {
+                    this.loadInitialTags();
+                    const suggestions = document.getElementById("tag-suggestions");
+                    if (suggestions) {
+                        suggestions.style.display = "block";
+                    }
+                } else {
+                    tagDebounceTimer = setTimeout(() => {
+                        this.searchTags(e.target.value);
+                        const suggestions = document.getElementById("tag-suggestions");
+                        if (suggestions) {
+                            suggestions.style.display = "block";
+                        }
+                    }, 300);
+                }
+            });
+        }
 
         // Close tag suggestions when clicking outside
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('#term-selector-popup-tag-filter') && 
+            const suggestions = document.getElementById("tag-suggestions");
+            if (suggestions && 
+                !e.target.closest('#term-selector-popup-tag-filter') && 
                 !e.target.closest('#tag-suggestions')) {
-                document.getElementById("tag-suggestions").style.display = "none";
+                suggestions.style.display = "none";
             }
         });
 
-        // update search while the user types
-        searchBox.onkeyup = this.getSearchTerms;
-
-        // run the search initially and load tags without showing them
+        // Run initial searches
         this.loadInitialTags();
         this.getSearchTerms();
     }
 
+    componentDidMount() {
+        // Store reference for tag chip removal
+        window.lastTermSource = this;
+        
+        // Insert modal into the DOM
+        const modalContainer = document.createElement('div');
+        modalContainer.innerHTML = this.modalContent;
+        document.body.appendChild(modalContainer.firstElementChild);
+        
+        // Show the modal
+        this.showModal();
+    }
+
+    componentWillUnmount() {
+        // Clean up modal when component unmounts
+        const modal = document.getElementById('term-selector-modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
     render() {
-        // always returns null
-        return null
+        return null;
     }
 }
 
