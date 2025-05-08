@@ -45,7 +45,6 @@ def register_term_feature(features):
         draftail_features.EntityFeature(
             control,
             js=[
-                "wagtailterms/popup-js-1.4.2.js",
                 "wagtailterms/term.js",
                 "wagtailterms/popperjs.js",
                 "wagtailterms/tippyjs.js",
