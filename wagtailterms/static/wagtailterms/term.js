@@ -3,8 +3,10 @@ class TermSource extends window.React.Component {
     state = {
         terms: [],
         selectedTags: new Set(),
-        tagSuggestions: [],
-        isModalVisible: false
+        isModalVisible: false,
+        tagPage: 1,
+        isLoadingTags: false,
+        hasMoreTags: true
     }
 
     modalContent = `
@@ -60,8 +62,7 @@ class TermSource extends window.React.Component {
                                             <div class="w-field w-field--tag_field w-field--admin_tag_widget" data-field>
                                                 <label class="w-field__label">Filter by Tags</label>
                                                 <div class="w-field__input">
-                                                    <input type="text" id="term-selector-popup-tag-filter" class="w-field__textinput" placeholder="Search tags...">
-                                                    <div id="tag-list" class="w-field__tags" style="min-height: 400px; max-height: 60vh; overflow-y: auto; margin-top: 8px;"></div>
+                                                    <div id="tag-list" class="w-field__tags" style="min-height: 400px; max-height: 60vh; overflow-y: auto;"></div>
                                                 </div>
                                             </div>
                                         </div>
@@ -171,8 +172,12 @@ class TermSource extends window.React.Component {
             selectedTags.add(tag.name);
         }
         
+        // Update all matching checkboxes with the same value
+        document.querySelectorAll(`.tag-checkbox[value="${tag.name}"]`).forEach(checkbox => {
+            checkbox.checked = selectedTags.has(tag.name);
+        });
+        
         this.setState({ selectedTags }, () => {
-            this.loadInitialTags();
             this.getSearchTerms();
         });
     }
@@ -190,40 +195,51 @@ class TermSource extends window.React.Component {
         `).join('');
     }
 
-    searchTags = (query) => {
-        fetch(`${WAGTAIL_TERM_PATH}tags/?q=${encodeURIComponent(query)}`)
+    searchTags = (page = 1, append = false) => {
+        if (this.state.isLoadingTags || (!this.state.hasMoreTags && page > 1)) return;
+
+        this.setState({ isLoadingTags: true });
+        
+        fetch(`${WAGTAIL_TERM_PATH}tags/?page=${page}`)
             .then(response => response.json())
-            .then(tags => {
+            .then(data => {
                 const tagListDiv = document.getElementById("tag-list");
-                const allTags = tags.sort((a, b) => a.name.localeCompare(b.name));
+                if (!tagListDiv) return;
+
+                const tags = data.tags || data;
+                const hasMore = data.hasMore !== undefined ? data.hasMore : true;
                 
-                // Always show selected tags at the top
-                const selectedTagsHtml = Array.from(this.state.selectedTags)
-                    .map(tagName => {
-                        const tag = allTags.find(t => t.name === tagName) || { name: tagName, count: 0 };
-                        return this.createTagCheckboxHtml(tag, true);
-                    })
-                    .join('');
+                // Generate HTML for all tags, ensuring selected state is preserved
+                const tagsHtml = tags.map(tag => {
+                    const isChecked = this.state.selectedTags.has(tag.name);
+                    return this.createTagCheckboxHtml(tag, isChecked);
+                }).join('');
 
-                // Filter unselected tags based on search query
-                const unselectedTagsHtml = allTags
-                    .filter(tag => 
-                        !this.state.selectedTags.has(tag.name) && 
-                        tag.name.toLowerCase().includes(query.toLowerCase())
-                    )
-                    .map(tag => this.createTagCheckboxHtml(tag, false))
-                    .join('');
+                if (append) {
+                    tagListDiv.insertAdjacentHTML('beforeend', tagsHtml);
+                } else {
+                    tagListDiv.innerHTML = tagsHtml;
+                }
 
-                tagListDiv.innerHTML = selectedTagsHtml + unselectedTagsHtml;
+                // We don't need to add click event listeners here anymore since we're using onclick in the HTML
 
-                // Add event listeners to checkboxes
-                const checkboxes = tagListDiv.getElementsByClassName('tag-checkbox');
-                Array.from(checkboxes).forEach(checkbox => {
-                    checkbox.addEventListener('change', (e) => {
-                        this.handleTagSelect({ name: e.target.value });
-                    });
+                this.setState({ 
+                    tagPage: page,
+                    isLoadingTags: false,
+                    hasMoreTags: hasMore
                 });
+            })
+            .catch(error => {
+                console.error('Error fetching tags:', error);
+                this.setState({ isLoadingTags: false });
             });
+    }
+
+    handleTagScroll = (e) => {
+        const element = e.target;
+        if (element.scrollHeight - element.scrollTop <= element.clientHeight + 100) {
+            this.searchTags(this.state.tagPage + 1, true);
+        }
     }
 
     // function to search for terms that match the search text and selected tag
@@ -295,52 +311,31 @@ class TermSource extends window.React.Component {
     };
 
     loadInitialTags = () => {
-        fetch(`${WAGTAIL_TERM_PATH}tags/`)
-            .then(response => response.json())
-            .then(tags => {
-                const tagListDiv = document.getElementById("tag-list");
-                // Get all available tags and sort them
-                const allTags = tags.sort((a, b) => a.name.localeCompare(b.name));
-                
-                // First show selected tags
-                const selectedTagsHtml = Array.from(this.state.selectedTags)
-                    .map(tagName => {
-                        const tag = allTags.find(t => t.name === tagName) || { name: tagName, count: 0 };
-                        return this.createTagCheckboxHtml(tag, true);
-                    })
-                    .join('');
-
-                // Then show unselected tags that match the current search results
-                const unselectedTagsHtml = allTags
-                    .filter(tag => !this.state.selectedTags.has(tag.name))
-                    .map(tag => this.createTagCheckboxHtml(tag, false))
-                    .join('');
-
-                tagListDiv.innerHTML = selectedTagsHtml + unselectedTagsHtml;
-
-                // Add event listeners to checkboxes
-                const checkboxes = tagListDiv.getElementsByClassName('tag-checkbox');
-                Array.from(checkboxes).forEach(checkbox => {
-                    checkbox.addEventListener('change', (e) => {
-                        this.handleTagSelect({ name: e.target.value });
-                    });
-                });
-            });
+        this.setState({ tagPage: 1, hasMoreTags: true }, () => {
+            this.searchTags(1, false);
+        });
     }
 
     createTagCheckboxHtml = (tag, isChecked) => {
         return `
-            <div class="tag-item" style="display: flex; align-items: center; padding: 4px 8px; ${isChecked ? 'background: var(--w-color-surface-button-hover);' : ''}">
+            <div class="tag-item" style="display: flex; align-items: center; padding: 4px 8px;">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; width: 100%;">
                     <input type="checkbox" 
                            class="tag-checkbox" 
-                           value="${tag.name}" 
-                           ${isChecked ? 'checked' : ''}>
+                           value="${tag.name}"
+                           ${isChecked ? 'checked' : ''}
+                           onclick="window.lastTermSource.handleTagClick(event)">
                     <span>${tag.name}</span>
                     <span style="color: var(--w-color-text-label); margin-left: auto;">(${tag.count})</span>
                 </label>
             </div>
         `;
+    }
+
+    handleTagClick = (event) => {
+        event.stopPropagation();
+        const checkbox = event.target;
+        this.handleTagSelect({ name: checkbox.value });
     }
 
     initializePopup = () => {
@@ -350,7 +345,6 @@ class TermSource extends window.React.Component {
         }
 
         const searchBox = document.getElementById("term-selector-popup-search-box");
-        const tagInput = document.getElementById("term-selector-popup-tag-filter");
 
         if (searchBox) {
             // Get the selected text
@@ -366,47 +360,10 @@ class TermSource extends window.React.Component {
             searchBox.onkeyup = this.getSearchTerms;
         }
 
-        if (tagInput) {
-            let tagDebounceTimer;
-            tagInput.addEventListener('focus', () => {
-                if (!tagInput.value) {
-                    this.loadInitialTags();
-                    const suggestions = document.getElementById("tag-suggestions");
-                    if (suggestions) {
-                        suggestions.style.display = "block";
-                    }
-                }
-            });
-
-            tagInput.addEventListener('input', (e) => {
-                clearTimeout(tagDebounceTimer);
-                if (e.target.value === '') {
-                    this.loadInitialTags();
-                    const suggestions = document.getElementById("tag-suggestions");
-                    if (suggestions) {
-                        suggestions.style.display = "block";
-                    }
-                } else {
-                    tagDebounceTimer = setTimeout(() => {
-                        this.searchTags(e.target.value);
-                        const suggestions = document.getElementById("tag-suggestions");
-                        if (suggestions) {
-                            suggestions.style.display = "block";
-                        }
-                    }, 300);
-                }
-            });
+        const tagListDiv = document.getElementById("tag-list");
+        if (tagListDiv) {
+            tagListDiv.addEventListener('scroll', this.handleTagScroll);
         }
-
-        // Close tag suggestions when clicking outside
-        document.addEventListener('click', (e) => {
-            const suggestions = document.getElementById("tag-suggestions");
-            if (suggestions && 
-                !e.target.closest('#term-selector-popup-tag-filter') && 
-                !e.target.closest('#tag-suggestions')) {
-                suggestions.style.display = "none";
-            }
-        });
 
         // Run initial searches
         this.loadInitialTags();
@@ -427,8 +384,12 @@ class TermSource extends window.React.Component {
     }
 
     componentWillUnmount() {
-        // Clean up modal when component unmounts
+        // Clean up modal and event listeners when component unmounts
         const modal = document.getElementById('term-selector-modal');
+        const tagListDiv = document.getElementById("tag-list");
+        if (tagListDiv) {
+            tagListDiv.removeEventListener('scroll', this.handleTagScroll);
+        }
         if (modal) {
             modal.remove();
         }
