@@ -15,7 +15,7 @@ class TermSource extends window.React.Component {
                     <svg class="icon icon-cross" aria-hidden="true"><use href="#icon-cross"></use></svg>
                     Close
                 </button>
-                <div class="modal-body">
+                <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
                     <header class="w-header w-header--merged">
                         <div class="row">
                             <div class="left">
@@ -43,32 +43,31 @@ class TermSource extends window.React.Component {
                         <div class="tab-content">
                             <section id="tab-search" class="w-tabs__panel" role="tabpanel" aria-labelledby="tab-label-search">
                                 <form class="w-panel w-panel--search" novalidate>
-                                    <div class="w-field__wrapper">
-                                        <div class="w-field w-field--char_field w-field--text_input" data-field>
-                                            <label class="w-field__label" for="term-selector-popup-search-box">
-                                                Search term
-                                            </label>
-                                            <div class="w-field__input">
-                                                <input type="text" id="term-selector-popup-search-box" class="w-field__textinput" placeholder="Search">
+                                    <div style="display: flex; gap: 20px;">
+                                        <div class="w-field__wrapper" style="flex: 1;">
+                                            <div class="w-field w-field--char_field w-field--text_input" data-field>
+                                                <label class="w-field__label" for="term-selector-popup-search-box">
+                                                    Search term
+                                                </label>
+                                                <div class="w-field__input">
+                                                    <input type="text" id="term-selector-popup-search-box" class="w-field__textinput" placeholder="Search">
+                                                </div>
+                                                <div id="term-selector-popup-search-buttons-frame" class="listing results"></div>
+
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <div class="w-field__wrapper">
-                                        <div class="w-field w-field--tag_field w-field--admin_tag_widget" data-field>
-                                            <label class="w-field__label" for="term-selector-popup-tag-filter">
-                                                Filter by Tags
-                                            </label>
-                                            <div class="w-field__input">
-                                                <input type="text" id="term-selector-popup-tag-filter" class="w-field__textinput" placeholder="Search tags...">
-                                                <div id="tag-selected-list" class="tagit w-field__tags"></div>
-                                                <div id="tag-suggestions" class="w-field__suggestions"></div>
+                                        <div class="w-field__wrapper" style="flex: 0 0 300px; max-width: 300px;">
+                                            <div class="w-field w-field--tag_field w-field--admin_tag_widget" data-field>
+                                                <label class="w-field__label">Filter by Tags</label>
+                                                <div class="w-field__input">
+                                                    <input type="text" id="term-selector-popup-tag-filter" class="w-field__textinput" placeholder="Search tags...">
+                                                    <div id="tag-list" class="w-field__tags" style="max-height: 700px; overflow-y: auto; margin-top: 8px;"></div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </form>
-
-                                <div id="term-selector-popup-search-buttons-frame" class="listing results"></div>
                             </section>
                         </div>
                     </div>
@@ -174,14 +173,10 @@ class TermSource extends window.React.Component {
             selectedTags.add(tag.name);
         }
         
-        this.setState({ selectedTags });
-        this.updateSelectedTagsDisplay();
-        this.getSearchTerms();
-        
-        // Clear search input and show updated suggestions
-        const tagInput = document.getElementById("term-selector-popup-tag-filter");
-        tagInput.value = '';
-        this.loadInitialTags();
+        this.setState({ selectedTags }, () => {
+            this.loadInitialTags();
+            this.getSearchTerms();
+        });
     }
 
     updateSelectedTagsDisplay = () => {
@@ -201,25 +196,35 @@ class TermSource extends window.React.Component {
         fetch(`${WAGTAIL_TERM_PATH}tags/?q=${encodeURIComponent(query)}`)
             .then(response => response.json())
             .then(tags => {
-                const suggestionsDiv = document.getElementById("tag-suggestions");
-                // Filter out already selected tags
-                const availableTags = tags.filter(tag => !this.state.selectedTags.has(tag.name));
+                const tagListDiv = document.getElementById("tag-list");
+                const allTags = tags.sort((a, b) => a.name.localeCompare(b.name));
                 
-                if (availableTags.length > 0) {
-                    suggestionsDiv.innerHTML = availableTags
-                        .map(tag => `
-                            <div style="padding: 8px; cursor: pointer;" data-tag-name="${tag.name}"
-                                 onmouseover="this.style.backgroundColor = 'var(--w-color-surface-button-hover)'"
-                                 onmouseout="this.style.backgroundColor = 'var(--w-color-surface-field)'"
-                                 onclick="window.lastTermSource.handleTagSelect({name: '${tag.name}'})">
-                                ${tag.name} <small>(${tag.count})</small>
-                            </div>
-                        `)
-                        .join('');
-                    suggestionsDiv.style.display = "block";
-                } else {
-                    suggestionsDiv.style.display = "none";
-                }
+                // Always show selected tags at the top
+                const selectedTagsHtml = Array.from(this.state.selectedTags)
+                    .map(tagName => {
+                        const tag = allTags.find(t => t.name === tagName) || { name: tagName, count: 0 };
+                        return this.createTagCheckboxHtml(tag, true);
+                    })
+                    .join('');
+
+                // Filter unselected tags based on search query
+                const unselectedTagsHtml = allTags
+                    .filter(tag => 
+                        !this.state.selectedTags.has(tag.name) && 
+                        tag.name.toLowerCase().includes(query.toLowerCase())
+                    )
+                    .map(tag => this.createTagCheckboxHtml(tag, false))
+                    .join('');
+
+                tagListDiv.innerHTML = selectedTagsHtml + unselectedTagsHtml;
+
+                // Add event listeners to checkboxes
+                const checkboxes = tagListDiv.getElementsByClassName('tag-checkbox');
+                Array.from(checkboxes).forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => {
+                        this.handleTagSelect({ name: e.target.value });
+                    });
+                });
             });
     }
 
@@ -267,41 +272,49 @@ class TermSource extends window.React.Component {
         fetch(`${WAGTAIL_TERM_PATH}tags/`)
             .then(response => response.json())
             .then(tags => {
-                const suggestionsDiv = document.getElementById("tag-suggestions");
-                // Filter out already selected tags
-                const availableTags = tags.filter(tag => !this.state.selectedTags.has(tag.name));
+                const tagListDiv = document.getElementById("tag-list");
+                // Get all available tags and sort them
+                const allTags = tags.sort((a, b) => a.name.localeCompare(b.name));
                 
-                if (availableTags.length > 0) {
-                    suggestionsDiv.innerHTML = availableTags
-                        .slice(0, 20)
-                        .map(tag => `
-                            <div style="padding: 8px; cursor: pointer;" data-tag-name="${tag.name}"
-                                 onmouseover="this.style.backgroundColor = 'var(--w-color-surface-button-hover)'"
-                                 onmouseout="this.style.backgroundColor = 'var(--w-color-surface-field)'"
-                                 onclick="window.lastTermSource.handleTagSelect({name: '${tag.name}'})">
-                                ${tag.name} <small>(${tag.count})</small>
-                            </div>
-                        `)
-                        .join('');
-                    suggestionsDiv.style.display = "block";
+                // First show selected tags
+                const selectedTagsHtml = Array.from(this.state.selectedTags)
+                    .map(tagName => {
+                        const tag = allTags.find(t => t.name === tagName) || { name: tagName, count: 0 };
+                        return this.createTagCheckboxHtml(tag, true);
+                    })
+                    .join('');
 
-                    // Add click handlers for suggestions using the correct class name
-                    const suggestions = suggestionsDiv.getElementsByClassName("term-popup__tag-suggestion");
-                    Array.from(suggestions).forEach(suggestion => {
-                        suggestion.addEventListener('mouseover', () => {
-                            suggestion.style.backgroundColor = 'var(--w-color-surface-button-hover)';
-                        });
-                        suggestion.addEventListener('mouseout', () => {
-                            suggestion.style.backgroundColor = 'var(--w-color-surface-field)';
-                        });
-                        suggestion.addEventListener('click', () => this.handleTagSelect({
-                            name: suggestion.dataset.tagName
-                        }));
+                // Then show unselected tags that match the current search results
+                const unselectedTagsHtml = allTags
+                    .filter(tag => !this.state.selectedTags.has(tag.name))
+                    .map(tag => this.createTagCheckboxHtml(tag, false))
+                    .join('');
+
+                tagListDiv.innerHTML = selectedTagsHtml + unselectedTagsHtml;
+
+                // Add event listeners to checkboxes
+                const checkboxes = tagListDiv.getElementsByClassName('tag-checkbox');
+                Array.from(checkboxes).forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => {
+                        this.handleTagSelect({ name: e.target.value });
                     });
-                } else {
-                    suggestionsDiv.style.display = "none";
-                }
+                });
             });
+    }
+
+    createTagCheckboxHtml = (tag, isChecked) => {
+        return `
+            <div class="tag-item" style="display: flex; align-items: center; padding: 4px 8px; ${isChecked ? 'background: var(--w-color-surface-button-hover);' : ''}">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; width: 100%;">
+                    <input type="checkbox" 
+                           class="tag-checkbox" 
+                           value="${tag.name}" 
+                           ${isChecked ? 'checked' : ''}>
+                    <span>${tag.name}</span>
+                    <span style="color: var(--w-color-text-label); margin-left: auto;">(${tag.count})</span>
+                </label>
+            </div>
+        `;
     }
 
     initializePopup = () => {
