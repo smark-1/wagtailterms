@@ -3,8 +3,10 @@ class TermSource extends window.React.Component {
     state = {
         terms: [],
         selectedTags: new Set(),
-        tagSuggestions: [],
-        isModalVisible: false
+        isModalVisible: false,
+        tagPage: 1,
+        isLoadingTags: false,
+        hasMoreTags: true
     }
 
     modalContent = `
@@ -43,32 +45,28 @@ class TermSource extends window.React.Component {
                         <div class="tab-content">
                             <section id="tab-search" class="w-tabs__panel" role="tabpanel" aria-labelledby="tab-label-search">
                                 <form class="w-panel w-panel--search" novalidate>
-                                    <div class="w-field__wrapper">
-                                        <div class="w-field w-field--char_field w-field--text_input" data-field>
-                                            <label class="w-field__label" for="term-selector-popup-search-box">
-                                                Search term
-                                            </label>
-                                            <div class="w-field__input">
-                                                <input type="text" id="term-selector-popup-search-box" class="w-field__textinput" placeholder="Search">
+                                    <div style="display: flex; gap: 20px;">
+                                        <div class="w-field__wrapper" style="flex: 1;">
+                                            <div class="w-field w-field--char_field w-field--text_input" data-field>
+                                                <label class="w-field__label" for="term-selector-popup-search-box">
+                                                    Search term
+                                                </label>
+                                                <div class="w-field__input">
+                                                    <input type="text" id="term-selector-popup-search-box" class="w-field__textinput" placeholder="Search">
+                                                </div>
                                             </div>
+                                            <div id="term-selector-popup-search-buttons-frame" class="listing results" style="min-height: 400px; max-height: 60vh; overflow-y: auto; margin-top: 10px;"></div>
                                         </div>
-                                    </div>
 
-                                    <div class="w-field__wrapper">
-                                        <div class="w-field w-field--tag_field w-field--admin_tag_widget" data-field>
-                                            <label class="w-field__label" for="term-selector-popup-tag-filter">
-                                                Filter by Tags
-                                            </label>
-                                            <div class="w-field__input">
-                                                <input type="text" id="term-selector-popup-tag-filter" class="w-field__textinput" placeholder="Search tags...">
-                                                <div id="tag-selected-list" class="tagit w-field__tags"></div>
-                                                <div id="tag-suggestions" class="w-field__suggestions"></div>
+                                        <div class="w-field__wrapper" style="flex: 0 0 300px; max-width: 300px;">
+                                            <div class="w-field w-field--tag_field w-field--admin_tag_widget" data-field>
+                                                <label class="w-field__label">Filter by Tags</label>
+                                                <div class="w-field__input">
+                                                    <div id="tag-list" class="w-field__tags" style="min-height: 400px; max-height: 60vh; overflow-y: auto;"></div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
                                 </form>
-
-                                <div id="term-selector-popup-search-buttons-frame" class="listing results"></div>
                             </section>
                         </div>
                     </div>
@@ -107,16 +105,16 @@ class TermSource extends window.React.Component {
     }
 
     handleSetTerm = (e) => {
-        // get the term id from the clicked button
-        const buttonElement = e.target.closest('button');
-        if (!buttonElement) {
-            console.error('Button element not found');
+        // get the term id from the clicked row
+        const rowElement = e.target.closest('tr');
+        if (!rowElement) {
+            console.error('Row element not found');
             return;
         }
 
-        const termId = parseInt(buttonElement.dataset.termId);
+        const termId = parseInt(rowElement.dataset.termId);
         if (isNaN(termId)) {
-            console.error('Invalid term ID:', buttonElement.dataset.termId);
+            console.error('Invalid term ID:', rowElement.dataset.termId);
             return;
         }
 
@@ -174,14 +172,14 @@ class TermSource extends window.React.Component {
             selectedTags.add(tag.name);
         }
         
-        this.setState({ selectedTags });
-        this.updateSelectedTagsDisplay();
-        this.getSearchTerms();
+        // Update all matching checkboxes with the same value
+        document.querySelectorAll(`.tag-checkbox[value="${tag.name}"]`).forEach(checkbox => {
+            checkbox.checked = selectedTags.has(tag.name);
+        });
         
-        // Clear search input and show updated suggestions
-        const tagInput = document.getElementById("term-selector-popup-tag-filter");
-        tagInput.value = '';
-        this.loadInitialTags();
+        this.setState({ selectedTags }, () => {
+            this.getSearchTerms();
+        });
     }
 
     updateSelectedTagsDisplay = () => {
@@ -197,30 +195,51 @@ class TermSource extends window.React.Component {
         `).join('');
     }
 
-    searchTags = (query) => {
-        fetch(`${WAGTAIL_TERM_PATH}tags/?q=${encodeURIComponent(query)}`)
+    searchTags = (page = 1, append = false) => {
+        if (this.state.isLoadingTags || (!this.state.hasMoreTags && page > 1)) return;
+
+        this.setState({ isLoadingTags: true });
+        
+        fetch(`${WAGTAIL_TERM_PATH}tags/?page=${page}`)
             .then(response => response.json())
-            .then(tags => {
-                const suggestionsDiv = document.getElementById("tag-suggestions");
-                // Filter out already selected tags
-                const availableTags = tags.filter(tag => !this.state.selectedTags.has(tag.name));
+            .then(data => {
+                const tagListDiv = document.getElementById("tag-list");
+                if (!tagListDiv) return;
+
+                const tags = data.tags || data;
+                const hasMore = data.hasMore !== undefined ? data.hasMore : true;
                 
-                if (availableTags.length > 0) {
-                    suggestionsDiv.innerHTML = availableTags
-                        .map(tag => `
-                            <div style="padding: 8px; cursor: pointer;" data-tag-name="${tag.name}"
-                                 onmouseover="this.style.backgroundColor = 'var(--w-color-surface-button-hover)'"
-                                 onmouseout="this.style.backgroundColor = 'var(--w-color-surface-field)'"
-                                 onclick="window.lastTermSource.handleTagSelect({name: '${tag.name}'})">
-                                ${tag.name} <small>(${tag.count})</small>
-                            </div>
-                        `)
-                        .join('');
-                    suggestionsDiv.style.display = "block";
+                // Generate HTML for all tags, ensuring selected state is preserved
+                const tagsHtml = tags.map(tag => {
+                    const isChecked = this.state.selectedTags.has(tag.name);
+                    return this.createTagCheckboxHtml(tag, isChecked);
+                }).join('');
+
+                if (append) {
+                    tagListDiv.insertAdjacentHTML('beforeend', tagsHtml);
                 } else {
-                    suggestionsDiv.style.display = "none";
+                    tagListDiv.innerHTML = tagsHtml;
                 }
+
+                // We don't need to add click event listeners here anymore since we're using onclick in the HTML
+
+                this.setState({ 
+                    tagPage: page,
+                    isLoadingTags: false,
+                    hasMoreTags: hasMore
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching tags:', error);
+                this.setState({ isLoadingTags: false });
             });
+    }
+
+    handleTagScroll = (e) => {
+        const element = e.target;
+        if (element.scrollHeight - element.scrollTop <= element.clientHeight + 100) {
+            this.searchTags(this.state.tagPage + 1, true);
+        }
     }
 
     // function to search for terms that match the search text and selected tag
@@ -238,70 +257,85 @@ class TermSource extends window.React.Component {
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                // Store the terms in state before rendering buttons
+                // Store the terms in state before rendering table
                 this.setState({ terms: data }, () => {
-                    frame.innerHTML = "";
-                    for (const item of data) {
-                        const tags = item.tags && item.tags.length > 0 
-                            ? `<div style="font-size: 0.85em; color: var(--w-color-text-label); background: var(--w-color-surface-field-inactive); display: inline-block; padding: 2px 6px; border-radius: 4px; margin-top: 4px;">${item.tags.join(', ')}</div>` 
-                            : '';
-                        frame.innerHTML += `
-                            <button style="display: block; width: 100%; text-align: left; padding: 8px 12px; margin-bottom: 4px; background: var(--w-color-surface-field); border: 2px solid var(--w-color-border-field); border-radius: 6px; color: var(--w-color-text-context); cursor: pointer; transition: all 0.2s ease;" 
-                                    onmouseover="this.style.backgroundColor = 'var(--w-color-surface-button-hover)'; this.style.borderColor = 'var(--w-color-border-button-hover)'"
-                                    onmouseout="this.style.backgroundColor = 'var(--w-color-surface-field)'; this.style.borderColor = 'var(--w-color-border-field)'"
-                                    onclick="window.lastTermSource.handleSetTerm(event)"
-                                    data-term-id="${item.id}">
-                                <div style="font-weight: 500; margin-bottom: 2px;">${item.term}</div>
-                                ${tags}
-                            </button>`;
-                    }
+                    // Create table structure
+                    const tableHtml = `
+                        <table class="listing" style="width: 100%;">
+                            <thead>
+                                <tr class="table-headers">
+                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 20%;">Term</th>
+                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 50%;">Definition</th>
+                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 30%;">Tags</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.map(item => `
+                                    <tr class="term-row" 
+                                        data-term-id="${item.id}"
+                                        style="cursor: pointer; transition: background-color 0.2s ease;"
+                                        onmouseover="this.style.backgroundColor = 'var(--w-color-surface-button-hover)'"
+                                        onmouseout="this.style.backgroundColor = ''"
+                                        onclick="window.lastTermSource.handleSetTerm(event)">
+                                        <td style="padding: 8px; border-bottom: 1px solid var(--w-color-border-field);">
+                                            <div style="font-weight: 500;">${item.term}</div>
+                                        </td>
+                                        <td style="padding: 8px; border-bottom: 1px solid var(--w-color-border-field); color: var(--w-color-text-context);">
+                                            ${item.definition ? 
+                                                (item.definition.length > 150 ? 
+                                                    item.definition.substring(0, 150) + '...' : 
+                                                    item.definition) : 
+                                                ''}
+                                        </td>
+                                        <td style="padding: 8px; border-bottom: 1px solid var(--w-color-border-field);">
+                                            ${item.tags && item.tags.length > 0 
+                                                ? item.tags.map(tag => 
+                                                    `<span style="display: inline-block; font-size: 0.85em; color: var(--w-color-text-label); background: var(--w-color-surface-field-inactive); padding: 2px 6px; border-radius: 4px; margin: 2px;">${tag}</span>`
+                                                ).join(' ')
+                                                : ''}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>`;
+
+                    frame.innerHTML = data.length > 0 
+                        ? tableHtml 
+                        : '<p style="padding: 8px; color: var(--w-color-text-label);">No terms found</p>';
                 });
             })
             .catch(error => {
                 console.error('Error fetching terms:', error);
-                frame.innerHTML = '<p style="color: red;">Error loading terms</p>';
+                frame.innerHTML = '<p style="color: red; padding: 8px;">Error loading terms</p>';
             });
     };
 
     loadInitialTags = () => {
-        fetch(`${WAGTAIL_TERM_PATH}tags/`)
-            .then(response => response.json())
-            .then(tags => {
-                const suggestionsDiv = document.getElementById("tag-suggestions");
-                // Filter out already selected tags
-                const availableTags = tags.filter(tag => !this.state.selectedTags.has(tag.name));
-                
-                if (availableTags.length > 0) {
-                    suggestionsDiv.innerHTML = availableTags
-                        .slice(0, 20)
-                        .map(tag => `
-                            <div style="padding: 8px; cursor: pointer;" data-tag-name="${tag.name}"
-                                 onmouseover="this.style.backgroundColor = 'var(--w-color-surface-button-hover)'"
-                                 onmouseout="this.style.backgroundColor = 'var(--w-color-surface-field)'"
-                                 onclick="window.lastTermSource.handleTagSelect({name: '${tag.name}'})">
-                                ${tag.name} <small>(${tag.count})</small>
-                            </div>
-                        `)
-                        .join('');
-                    suggestionsDiv.style.display = "block";
+        this.setState({ tagPage: 1, hasMoreTags: true }, () => {
+            this.searchTags(1, false);
+        });
+    }
 
-                    // Add click handlers for suggestions using the correct class name
-                    const suggestions = suggestionsDiv.getElementsByClassName("term-popup__tag-suggestion");
-                    Array.from(suggestions).forEach(suggestion => {
-                        suggestion.addEventListener('mouseover', () => {
-                            suggestion.style.backgroundColor = 'var(--w-color-surface-button-hover)';
-                        });
-                        suggestion.addEventListener('mouseout', () => {
-                            suggestion.style.backgroundColor = 'var(--w-color-surface-field)';
-                        });
-                        suggestion.addEventListener('click', () => this.handleTagSelect({
-                            name: suggestion.dataset.tagName
-                        }));
-                    });
-                } else {
-                    suggestionsDiv.style.display = "none";
-                }
-            });
+    createTagCheckboxHtml = (tag, isChecked) => {
+        return `
+            <div class="tag-item" style="display: flex; align-items: center; padding: 4px 8px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; width: 100%;">
+                    <input type="checkbox" 
+                           class="tag-checkbox" 
+                           value="${tag.name}"
+                           ${isChecked ? 'checked' : ''}
+                           onclick="window.lastTermSource.handleTagClick(event)">
+                    <span>${tag.name}</span>
+                    <span style="color: var(--w-color-text-label); margin-left: auto;">(${tag.count})</span>
+                </label>
+            </div>
+        `;
+    }
+
+    handleTagClick = (event) => {
+        event.stopPropagation();
+        const checkbox = event.target;
+        this.handleTagSelect({ name: checkbox.value });
     }
 
     initializePopup = () => {
@@ -311,7 +345,6 @@ class TermSource extends window.React.Component {
         }
 
         const searchBox = document.getElementById("term-selector-popup-search-box");
-        const tagInput = document.getElementById("term-selector-popup-tag-filter");
 
         if (searchBox) {
             // Get the selected text
@@ -327,47 +360,10 @@ class TermSource extends window.React.Component {
             searchBox.onkeyup = this.getSearchTerms;
         }
 
-        if (tagInput) {
-            let tagDebounceTimer;
-            tagInput.addEventListener('focus', () => {
-                if (!tagInput.value) {
-                    this.loadInitialTags();
-                    const suggestions = document.getElementById("tag-suggestions");
-                    if (suggestions) {
-                        suggestions.style.display = "block";
-                    }
-                }
-            });
-
-            tagInput.addEventListener('input', (e) => {
-                clearTimeout(tagDebounceTimer);
-                if (e.target.value === '') {
-                    this.loadInitialTags();
-                    const suggestions = document.getElementById("tag-suggestions");
-                    if (suggestions) {
-                        suggestions.style.display = "block";
-                    }
-                } else {
-                    tagDebounceTimer = setTimeout(() => {
-                        this.searchTags(e.target.value);
-                        const suggestions = document.getElementById("tag-suggestions");
-                        if (suggestions) {
-                            suggestions.style.display = "block";
-                        }
-                    }, 300);
-                }
-            });
+        const tagListDiv = document.getElementById("tag-list");
+        if (tagListDiv) {
+            tagListDiv.addEventListener('scroll', this.handleTagScroll);
         }
-
-        // Close tag suggestions when clicking outside
-        document.addEventListener('click', (e) => {
-            const suggestions = document.getElementById("tag-suggestions");
-            if (suggestions && 
-                !e.target.closest('#term-selector-popup-tag-filter') && 
-                !e.target.closest('#tag-suggestions')) {
-                suggestions.style.display = "none";
-            }
-        });
 
         // Run initial searches
         this.loadInitialTags();
@@ -388,8 +384,12 @@ class TermSource extends window.React.Component {
     }
 
     componentWillUnmount() {
-        // Clean up modal when component unmounts
+        // Clean up modal and event listeners when component unmounts
         const modal = document.getElementById('term-selector-modal');
+        const tagListDiv = document.getElementById("tag-list");
+        if (tagListDiv) {
+            tagListDiv.removeEventListener('scroll', this.handleTagScroll);
+        }
         if (modal) {
             modal.remove();
         }

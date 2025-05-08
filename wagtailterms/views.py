@@ -35,7 +35,12 @@ class TermViewSet(ReadOnlyModelViewSet):
             
     @action(detail=False, methods=['get'])
     def tags(self, request):
-        q = request.query_params.get('q', '').lower()
+        try:
+            page = int(request.query_params.get('page', 1))
+        except ValueError:
+            page = 1  # Default to page 1 if input is invalid
+        page_size = 50  # Number of tags per page
+        
         # Get all unique tags from live terms, ordered by usage count
         tags = Tag.objects.filter(
             wagtailterms_wagtailtermtag_items__content_object__live=True
@@ -43,11 +48,17 @@ class TermViewSet(ReadOnlyModelViewSet):
             usage_count=models.Count('wagtailterms_wagtailtermtag_items')
         ).order_by('-usage_count')
         
-        if q:
-            tags = tags.filter(name__icontains=q)
-            
-        # Return tags with their counts
-        return Response([
-            {"name": tag.name, "count": tag.usage_count} 
-            for tag in tags
-        ])
+        # Apply pagination
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated_tags = tags[start:end]
+        has_more = tags.count() > end
+        
+        # Return tags with their counts and pagination info
+        return Response({
+            'tags': [
+                {"name": tag.name, "count": tag.usage_count} 
+                for tag in paginated_tags
+            ],
+            'hasMore': has_more
+        })
