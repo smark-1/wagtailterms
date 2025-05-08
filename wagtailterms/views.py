@@ -6,6 +6,7 @@ from taggit.models import Tag
 from django.db import models
 
 from .models import Term
+from .permissions import CanAccessTags
 from .serializers import TermSerializer
 
 from wagtail.search.backends import get_search_backend
@@ -50,11 +51,23 @@ class TermViewSet(ReadOnlyModelViewSet):
             queryset = get_search_backend().autocomplete(q, queryset)
             
         return queryset
-            
+
     @action(detail=False, methods=['get'])
     def tags(self, request):
+        permission_checker = CanAccessTags()
+        # Pass 'self' (the view instance) to provide the permission checker with access to the view's context or attributes,
+        # which might be necessary for evaluating permissions.
+        if not permission_checker.has_permission(request, self):
+            return Response(
+                {"error": permission_checker.message or "You do not have permission to access this endpoint."},
+                status=403 # Forbidden
+            )
+        
+        
         try:
             page = int(request.query_params.get('page', 1))
+            if page < 1: # Ensure page is not negative or zero
+                page = 1
         except ValueError:
             page = 1  # Default to page 1 if input is invalid
         page_size = 50  # Number of tags per page
@@ -65,7 +78,7 @@ class TermViewSet(ReadOnlyModelViewSet):
         ).annotate(
             usage_count=models.Count('wagtailterms_wagtailtermtag_items')
         ).order_by('-usage_count')
-        
+
         # Apply pagination
         start = (page - 1) * page_size
         end = start + page_size

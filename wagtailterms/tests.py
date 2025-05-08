@@ -1,17 +1,28 @@
 from django.test import override_settings
 from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from .models import Term
 from django.urls import reverse
-
 
 class TestTermEntity(APITestCase):
     @classmethod
     def setUpTestData(cls):
+        # Create or get the Wagtail groups
+        # We create the groups here since in tests the default Wagtail groups might not exist
+        cls.editor_group = Group.objects.get(name='Editors')
+        cls.moderator_group = Group.objects.get(name='Moderators')
+        
         cls.admin_user = get_user_model().objects.create_superuser(
                 "admin", password="pass"
         )
         cls.normal_user = get_user_model().objects.create_user("user", password="pass")
+        cls.editor_user = get_user_model().objects.create_user("editor", password="pass")
+        cls.moderator_user = get_user_model().objects.create_user("moderator", password="pass")
+        
+        # Add users to their respective groups
+        cls.editor_user.groups.add(cls.editor_group)
+        cls.moderator_user.groups.add(cls.moderator_group)
 
         with cls.captureOnCommitCallbacks(execute=True):  # Fixes issue with wagtail 6.4 do to "Background tasks run
             # at end of current transaction" https://docs.wagtail.org/en/latest/releases/6.4.html#background-tasks-run-at-end-of-current-transaction
@@ -133,6 +144,9 @@ class TestTermEntity(APITestCase):
 
     def test_tags_endpoint(self):
         """Test the tags endpoint"""
+        # Login as editor user to access the endpoint
+        self.client.login(username="editor", password="pass")
+        
         with self.captureOnCommitCallbacks(execute=True):
             self.term1.tags.add("tag1", "tag2")
             self.term1.save()
@@ -148,6 +162,9 @@ class TestTermEntity(APITestCase):
 
     def test_tags_pagination(self):
         """Test that tags endpoint pagination works"""
+        # Login as editor user to access the endpoint
+        self.client.login(username="editor", password="pass")
+        
         # Add enough tags to trigger pagination
         with self.captureOnCommitCallbacks(execute=True):
             for i in range(60):
@@ -166,3 +183,74 @@ class TestTermEntity(APITestCase):
         self.assertEqual(len(response.data['tags']), 10)
         self.assertIn('hasMore', response.data)  # Ensure 'hasMore' is present
         self.assertFalse(response.data['hasMore'])
+
+    def test_tags_endpoint_permissions(self):
+        """Test that the tags endpoint respects permission settings with explicit group membership checks"""
+        # Anonymous user should not have access
+        response = self.client.get(reverse("wagtailterms:terms-tags"))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data["error"], "You do not have permission to access this endpoint.")
+
+        # Normal user should not have access
+        self.client.login(username="user", password="pass")
+        response = self.client.get(reverse("wagtailterms:terms-tags"))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data["error"], "You do not have permission to access this endpoint.")
+
+        # Test editor access with explicit group check
+        self.client.login(username="editor", password="pass")
+        self.assertTrue(self.editor_user.groups.filter(name='Editors').exists())
+        editor_group = self.editor_user.groups.get(name='Editors')
+        self.assertEqual(editor_group, self.editor_group)
+        response = self.client.get(reverse("wagtailterms:terms-tags"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('tags', response.data)
+        self.assertIn('hasMore', response.data)
+
+        # Test moderator access with explicit group check
+        self.client.login(username="moderator", password="pass")
+        self.assertTrue(self.moderator_user.groups.filter(name='Moderators').exists())
+        moderator_group = self.moderator_user.groups.get(name='Moderators')
+        self.assertEqual(moderator_group, self.moderator_group)
+        response = self.client.get(reverse("wagtailterms:terms-tags"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('tags', response.data)
+        self.assertIn('hasMore', response.data)
+
+        # Test staff access
+        self.normal_user.is_staff = True
+        self.normal_user.save()
+        self.client.login(username="user", password="pass")
+        response = self.client.get(reverse("wagtailterms:terms-tags"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('tags', response.data)
+        self.assertIn('hasMore', response.data)
+
+        # Test superuser access
+        self.client.login(username="admin", password="pass")
+        response = self.client.get(reverse("wagtailterms:terms-tags"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('tags', response.data)
+        self.assertIn('hasMore', response.data)
+
+    def test_tags_endpoint_pagination(self):
+        """Test that the tags endpoint pagination works correctly"""
+        self.client.login(username="editor", password="pass")
+        
+        # Create some tags for pagination
+        with self.captureOnCommitCallbacks(execute=True):
+            for i in range(5):
+                self.term1.tags.add(f"tag{i}")
+            self.term1.save()
+        
+        # Test default page
+        response = self.client.get(reverse("wagtailterms:terms-tags"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('tags', response.data)
+        self.assertIn('hasMore', response.data)
+
+        # Test specific page
+        response = self.client.get(f"{reverse('wagtailterms:terms-tags')}?page=1")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('tags', response.data)
+        self.assertIn('hasMore', response.data)
