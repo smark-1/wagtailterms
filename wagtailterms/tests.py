@@ -157,10 +157,12 @@ class TestTermEntity(APITestCase):
         response = self.client.get(reverse("wagtailterms:terms-tags"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data['tags']), 50)  # default page size
+        self.assertIn('hasMore', response.data)  # Ensure 'hasMore' is present
         self.assertTrue(response.data['hasMore'])
         
         # Check second page
         response = self.client.get(f"{reverse('wagtailterms:terms-tags')}?page=2")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data['tags']), 10)
+        self.assertIn('hasMore', response.data)  # Ensure 'hasMore' is present
         self.assertFalse(response.data['hasMore'])
