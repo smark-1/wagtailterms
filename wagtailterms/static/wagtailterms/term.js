@@ -6,7 +6,10 @@ class TermSource extends window.React.Component {
         isModalVisible: false,
         tagPage: 1,
         isLoadingTags: false,
-        hasMoreTags: true
+        hasMoreTags: true,
+        currentPage: 1,
+        hasMoreTerms: true,
+        isLoadingTerms: false
     }
 
     modalContent = `
@@ -242,73 +245,158 @@ class TermSource extends window.React.Component {
         }
     }
 
-    // function to search for terms that match the search text and selected tag
-    getSearchTerms = () => {
-        const searchBox = document.getElementById("term-selector-popup-search-box");
-        const frame = document.getElementById("term-selector-popup-search-buttons-frame");
-        
-        // Build URL with search and tag parameters
-        let url = `${WAGTAIL_TERM_PATH}?q=${searchBox.value}`;
+    buildTermsUrl = (page, searchQuery) => {
+        let url = `${WAGTAIL_TERM_PATH}?page=${page}`;
+        if (searchQuery) {
+            url += `&q=${searchQuery}`;
+        }
         if (this.state.selectedTags.size > 0) {
             const tags = Array.from(this.state.selectedTags);
             url += tags.map(tag => `&tags[]=${encodeURIComponent(tag)}`).join('');
         }
+        return url;
+    }
 
-        fetch(url)
+    renderTermRow = (item) => `
+        <tr class="term-row" 
+            data-term-id="${item.id}"
+            style="cursor: pointer; transition: background-color 0.2s ease;"
+            onmouseover="this.style.backgroundColor = 'var(--w-color-surface-button-hover)'"
+            onmouseout="this.style.backgroundColor = ''"
+            onclick="window.lastTermSource.handleSetTerm(event)">
+            <td style="padding: 8px; border-bottom: 1px solid var(--w-color-border-field);">
+                <div style="font-weight: 500;">${item.term}</div>
+            </td>
+            <td style="padding: 8px; border-bottom: 1px solid var(--w-color-border-field); color: var(--w-color-text-context);">
+                ${item.definition ? 
+                    (item.definition.length > 150 ? 
+                        item.definition.substring(0, 150) + '...' : 
+                        item.definition) : 
+                    ''}
+            </td>
+            <td style="padding: 8px; border-bottom: 1px solid var(--w-color-border-field);">
+                ${item.tags && item.tags.length > 0 
+                    ? item.tags.map(tag => 
+                        `<span style="display: inline-block; font-size: 0.85em; color: var(--w-color-text-label); background: var(--w-color-surface-field-inactive); padding: 2px 6px; border-radius: 4px; margin: 2px;">${tag}</span>`
+                    ).join(' ')
+                    : ''}
+            </td>
+        </tr>
+    `
+
+    renderPaginationControls = (data) => {
+        const totalCount = data.count;
+        const totalPages = data.total_pages;
+        const currentPage = data.current_page;
+
+        // Only show pagination controls if there's more than one page
+        if (totalPages <= 1) {
+            return `
+            <div style="text-align: center; margin-top: 20px;">
+                <div style="text-align: center; line-height: 18px; padding: 0 10px;">
+                    <div>Showing ${this.state.terms.length} of ${totalCount} terms</div>
+                </div>
+            </div>
+            `;
+        }
+        
+        return `
+        <div style="text-align: center; margin-top: 20px;">
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
+                <button type="button" 
+                    class="button button-secondary" 
+                    onclick="window.lastTermSource.handlePageChange(${currentPage - 1})"
+                    ${!data.previous || this.state.isLoadingTerms ? 'disabled' : ''}>
+                    Previous
+                </button>
+                <div style="text-align: center; line-height: 18px; padding: 0 10px;">
+                    <div>Showing ${this.state.terms.length} of ${totalCount} terms</div>
+                    <div>Page ${currentPage} of ${totalPages}</div>
+                </div>
+                <button type="button" 
+                    class="button button-secondary" 
+                    onclick="window.lastTermSource.handlePageChange(${currentPage + 1})"
+                    ${!data.next || this.state.isLoadingTerms ? 'disabled' : ''}>
+                    Next
+                </button>
+            </div>
+        </div>
+        `
+    }
+
+    renderTermsTable = (terms) => `
+        <table class="listing" style="width: 100%;">
+            <thead>
+                <tr class="table-headers">
+                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 20%;">Term</th>
+                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 50%;">Definition</th>
+                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 30%;">Tags</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${terms.map(item => this.renderTermRow(item)).join('')}
+            </tbody>
+        </table>
+    `
+
+    updateTermsList = (data, append) => {
+        const frame = document.getElementById("term-selector-popup-search-buttons-frame");
+        
+        this.setState({ 
+            terms: data.results,
+            hasMoreTerms: data.next !== null,
+            isLoadingTerms: false
+        }, () => {
+            const content = data.count > 0 
+                ? this.renderTermsTable(data.results) + this.renderPaginationControls(data)
+                : '<p style="padding: 8px; color: var(--w-color-text-label);">No terms found</p>';
+            
+            frame.innerHTML = content;
+        });
+    }
+
+    handleSearchError = (error) => {
+        console.error('Error fetching terms:', error);
+        const frame = document.getElementById("term-selector-popup-search-buttons-frame");
+        frame.innerHTML = '<p style="color: red; padding: 8px;">Error loading terms</p>';
+        this.setState({ isLoadingTerms: false });
+    }
+
+    getSearchTerms = (page = 1, append = false) => {
+        // Don't fetch if we're already loading
+        if (this.state.isLoadingTerms) return;
+
+        const searchBox = document.getElementById("term-selector-popup-search-box");
+        this.setState({ isLoadingTerms: true });
+        
+        fetch(this.buildTermsUrl(page, searchBox.value))
             .then(response => response.json())
             .then(data => {
-                // Store the terms in state before rendering table
-                this.setState({ terms: data }, () => {
-                    // Create table structure
-                    const tableHtml = `
-                        <table class="listing" style="width: 100%;">
-                            <thead>
-                                <tr class="table-headers">
-                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 20%;">Term</th>
-                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 50%;">Definition</th>
-                                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 30%;">Tags</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${data.map(item => `
-                                    <tr class="term-row" 
-                                        data-term-id="${item.id}"
-                                        style="cursor: pointer; transition: background-color 0.2s ease;"
-                                        onmouseover="this.style.backgroundColor = 'var(--w-color-surface-button-hover)'"
-                                        onmouseout="this.style.backgroundColor = ''"
-                                        onclick="window.lastTermSource.handleSetTerm(event)">
-                                        <td style="padding: 8px; border-bottom: 1px solid var(--w-color-border-field);">
-                                            <div style="font-weight: 500;">${item.term}</div>
-                                        </td>
-                                        <td style="padding: 8px; border-bottom: 1px solid var(--w-color-border-field); color: var(--w-color-text-context);">
-                                            ${item.definition ? 
-                                                (item.definition.length > 150 ? 
-                                                    item.definition.substring(0, 150) + '...' : 
-                                                    item.definition) : 
-                                                ''}
-                                        </td>
-                                        <td style="padding: 8px; border-bottom: 1px solid var(--w-color-border-field);">
-                                            ${item.tags && item.tags.length > 0 
-                                                ? item.tags.map(tag => 
-                                                    `<span style="display: inline-block; font-size: 0.85em; color: var(--w-color-text-label); background: var(--w-color-surface-field-inactive); padding: 2px 6px; border-radius: 4px; margin: 2px;">${tag}</span>`
-                                                ).join(' ')
-                                                : ''}
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>`;
-
-                    frame.innerHTML = data.length > 0 
-                        ? tableHtml 
-                        : '<p style="padding: 8px; color: var(--w-color-text-label);">No terms found</p>';
+                // Update page state before updating the list
+                this.setState({ currentPage: page }, () => {
+                    this.updateTermsList(data, append);
                 });
             })
-            .catch(error => {
-                console.error('Error fetching terms:', error);
-                frame.innerHTML = '<p style="color: red; padding: 8px;">Error loading terms</p>';
-            });
-    };
+            .catch(this.handleSearchError);
+    }
+
+    handlePageChange = (page) => {
+        if (page < 1 || this.state.isLoadingTerms) {
+            return;
+        }
+        this.getSearchTerms(page, false);
+    }
+
+    handleSearchInput = () => {
+        // Reset pagination when search input changes
+        this.setState({
+            currentPage: 1,
+            terms: [],
+            hasMoreTerms: true
+        }, () => {
+            this.getSearchTerms(1, false);
+        });
+    }
 
     loadInitialTags = () => {
         this.setState({ tagPage: 1, hasMoreTags: true }, () => {
@@ -357,7 +445,7 @@ class TermSource extends window.React.Component {
             const current_selected_text = content.getBlockForKey(anchorKey).getText().slice(start, end);
 
             searchBox.value = current_selected_text;
-            searchBox.onkeyup = this.getSearchTerms;
+            searchBox.onkeyup = this.handleSearchInput;
         }
 
         const tagListDiv = document.getElementById("tag-list");
@@ -367,7 +455,7 @@ class TermSource extends window.React.Component {
 
         // Run initial searches
         this.loadInitialTags();
-        this.getSearchTerms();
+        this.getSearchTerms(1, false);
     }
 
     componentDidMount() {
