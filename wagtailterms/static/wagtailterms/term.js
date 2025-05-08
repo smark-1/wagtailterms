@@ -288,10 +288,7 @@ class TermSource extends window.React.Component {
         const totalCount = data.count;
         const totalPages = data.total_pages;
         const currentPage = data.current_page;
-        const pageSize = data.page_size; // Dynamically use backend's page size
-        const startItem = ((currentPage - 1) * pageSize) + 1;
-        const endItem = Math.min(startItem + this.state.terms.length - 1, totalCount);
-        
+
         // Only show pagination controls if there's more than one page
         if (totalPages <= 1) {
             return `
