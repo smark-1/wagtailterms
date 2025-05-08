@@ -11,11 +11,11 @@ class CanAccessTags(BasePermission):
         user = request.user
        
 
-        if (user.is_staff or user.is_superuser) and user.is_authenticated:
+        if user.is_authenticated and (user.is_staff or user.is_superuser):
             return True
 
         # Check if user is in 'Moderators' or 'Editors' group
-        if user.groups.filter(name__in=['Moderators', 'Editors']).exists() and user.is_authenticated:
+        if user.is_authenticated and user.groups.filter(name__in=['Moderators', 'Editors']).exists():
             return True
 
         return False
