@@ -35,7 +35,10 @@ class TermViewSet(ReadOnlyModelViewSet):
             
     @action(detail=False, methods=['get'])
     def tags(self, request):
-        page = int(request.query_params.get('page', 1))
+        try:
+            page = int(request.query_params.get('page', 1))
+        except ValueError:
+            page = 1  # Default to page 1 if input is invalid
         page_size = 50  # Number of tags per page
         
         # Get all unique tags from live terms, ordered by usage count
