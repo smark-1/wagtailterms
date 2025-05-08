@@ -9,7 +9,6 @@ class TestTermEntity(APITestCase):
     @classmethod
     def setUpTestData(cls):
         # Create or get the Wagtail groups
-        from django.contrib.auth.models import Group
         # We create the groups here since in tests the default Wagtail groups might not exist
         cls.editor_group = Group.objects.get(name='Editors')
         cls.moderator_group= Group.objects.get(name='Moderators')
