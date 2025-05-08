@@ -250,4 +250,5 @@ On hover
 - Updated REST API to include tags in responses
 - Updated the picker UI to match the rest of the wagtail admin
 - Tags filter uses infinite scroll
-- remove popup-js dependency
+- Remove popup-js dependency
+- Add pagination to the terms list

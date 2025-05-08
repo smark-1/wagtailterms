@@ -1,6 +1,7 @@
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from taggit.models import Tag
 from django.db import models
 
@@ -10,8 +11,25 @@ from .serializers import TermSerializer
 from wagtail.search.backends import get_search_backend
 
 
+class TermPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,
+            'total_pages': self.page.paginator.num_pages,
+            'current_page': self.page.number,
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'results': data
+        })
+
+
 class TermViewSet(ReadOnlyModelViewSet):
     serializer_class = TermSerializer
+    pagination_class = TermPagination
 
     def get_queryset(self):
         q = self.request.query_params.get("q")
