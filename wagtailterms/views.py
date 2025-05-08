@@ -55,7 +55,9 @@ class TermViewSet(ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'])
     def tags(self, request):
         permission_checker = CanAccessTags()
-        if not permission_checker.has_permission(request, self): # 'self' is the view instance
+        # Pass 'self' (the view instance) to provide the permission checker with access to the view's context or attributes,
+        # which might be necessary for evaluating permissions.
+        if not permission_checker.has_permission(request, self):
             return Response(
                 {"error": permission_checker.message or "You do not have permission to access this endpoint."},
                 status=403 # Forbidden
