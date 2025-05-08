@@ -11,7 +11,7 @@ class TestTermEntity(APITestCase):
         # Create or get the Wagtail groups
         # We create the groups here since in tests the default Wagtail groups might not exist
         cls.editor_group = Group.objects.get(name='Editors')
-        cls.moderator_group= Group.objects.get(name='Moderators')
+        cls.moderator_group = Group.objects.get(name='Moderators')
         
         cls.admin_user = get_user_model().objects.create_superuser(
                 "admin", password="pass"
