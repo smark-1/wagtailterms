@@ -252,7 +252,7 @@ class TermSource extends window.React.Component {
         }
         if (this.state.selectedTags.size > 0) {
             const tags = Array.from(this.state.selectedTags);
-            url += tags.map(tag => `&tags[]=${encodeURIComponent(tag)}`).join('');
+            url += tags.map(tag => `&tags=${encodeURIComponent(tag)}`).join('');
         }
         return url;
     }

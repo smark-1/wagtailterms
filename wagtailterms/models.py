@@ -18,8 +18,12 @@ class Term(index.Indexed, DraftStateMixin, RevisionMixin, LockableMixin, Cluster
 
     search_fields = [
         index.AutocompleteField("term", partial_match=True),
-        index.FilterField("term"),
+        index.SearchField("term",boost=2, partial_match=True),
+        index.SearchField("definition",boost=1),
         index.FilterField("live"),
+        index.RelatedFields('tags', [
+            index.SearchField("name", partial_match=False),
+        ])
     ]
 
     def __str__(self):

@@ -11,7 +11,6 @@ from .serializers import TermSerializer
 
 from wagtail.search.backends import get_search_backend
 
-
 class TermPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'page_size'
@@ -34,22 +33,24 @@ class TermViewSet(ReadOnlyModelViewSet):
 
     def get_queryset(self):
         q = self.request.query_params.get("q")
-        tags = self.request.query_params.getlist("tags[]")
-        
+        tags = self.request.query_params.getlist("tags")
+
         queryset = Term.objects.all()
         if not self.request.user.is_staff:
             queryset = queryset.filter(live=True)
             
         # Apply tag filters if provided - require ALL tags to match
-        if tags:
-            for tag in tags:
-                queryset = queryset.filter(tagged_terms__tag__name=tag)
-            queryset = queryset.distinct()
+        tags_objects = Tag.objects.filter(name__in=tags)
+        if tags_objects:
+            # Count matching tags per term and filter for terms that match all tags
+            queryset = queryset.annotate(
+                matching_tags=models.Count('tagged_terms__tag', 
+                                         filter=models.Q(tagged_terms__tag__in=tags_objects))
+            ).filter(matching_tags=len(tags_objects))
             
         # Apply search if provided
         if q:
-            queryset = get_search_backend().autocomplete(q, queryset)
-            
+            queryset = get_search_backend().search(q, queryset,operator="or")
         return queryset
 
     @action(detail=False, methods=['get'])
