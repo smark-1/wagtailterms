@@ -110,6 +110,13 @@ The REST API responses now include tags for each term:
 }
 ```
 
+### Search in the Page Editor
+The search functionality in the admin interface integrates with Wagtail's built-in search backend. This means:
+
+1. The search will use whatever search backend you have configured for your Wagtail site (e.g., database, Elasticsearch)
+2. It searches across term names, definitions, and tags
+3. The search respects Wagtail's search configuration settings and optimizations
+
 ### Display in template
 To display the terms on the frontend the term shows up as a `<span>` element 
 tag with a green underline and green text. In a future update this will be customizable. 
@@ -252,3 +259,4 @@ On hover
 - Tags filter uses infinite scroll
 - Remove popup-js dependency
 - Add pagination to the terms list
+- Improve search to search terms and definitions
