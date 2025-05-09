@@ -148,7 +148,7 @@ class TestTermEntity(APITestCase):
         
         # Test filtering by tag
         response = self.client.get(
-                f"{reverse('wagtailterms:terms-list')}?tags[]=test-tag"
+                f"{reverse('wagtailterms:terms-list')}?tags=test-tag"
         )
         self.assertEqual(response.status_code, 200)
         # Should get results including the term with test-tag
@@ -238,13 +238,13 @@ class TestTermEntity(APITestCase):
         get_search_backend().add_type(Term)
         
         response = self.client.get(
-                f"{reverse('wagtailterms:terms-list')}?tags[]=test-tag"
+                f"{reverse('wagtailterms:terms-list')}?tags=test-tag"
         )
         self.assertEqual(response.status_code, 200)
         terms = [result["term"] for result in response.data['results']]
         self.assertIn("Test Term", terms)
         self.assertIn("Test Term 2", terms)  # Both terms should be present
-        self.assertEqual(len(response.data['results']), 3)  # Gets all terms due to search behavior
+        self.assertEqual(len(response.data['results']), 2) # Should only return the two terms with the tag
 
     def test_multiple_tag_filter(self):
         """Test filtering by multiple tags (AND condition)"""
@@ -266,7 +266,7 @@ class TestTermEntity(APITestCase):
         get_search_backend().refresh_index()
         
         response = self.client.get(
-                f"{reverse('wagtailterms:terms-list')}?tags[]=tag1&tags[]=tag2"
+                f"{reverse('wagtailterms:terms-list')}?tags=tag1&tags=tag2"
         )
         self.assertEqual(response.status_code, 200)
         # With tag-based filtering, we still get all terms due to search behavior
