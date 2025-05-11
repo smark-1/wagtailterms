@@ -3,15 +3,21 @@ from wagtail.templatetags.wagtailcore_tags import richtext
 from .models import Term
 from taggit.serializers import (TagListSerializerField,
                               TaggitSerializer)
+from wagtailterms.default_settings import get_setting
 
 
 class TermSerializer(TaggitSerializer, serializers.ModelSerializer):
     definition = serializers.SerializerMethodField()
-    tags = TagListSerializerField()
 
     class Meta:
         model = Term
-        fields = ["term", "definition", "id", "tags"]
+        fields = ["term", "definition", "id"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add the 'tags' field only if the 'disable_tags' setting is not enabled.
+        if not get_setting('disable_tags'):
+            self.fields['tags'] = TagListSerializerField()
 
     def get_definition(self, obj):
         return richtext(obj.definition)

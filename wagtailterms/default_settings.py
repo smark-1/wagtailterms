@@ -6,7 +6,9 @@ from django.conf import settings
 DEFAULT_WAGTAILTERMS_SETTINGS = {
     'icon': 'snippet',
     'menu_order': 200,
-    'style': "text-decoration-line: underline; text-decoration-color: green;text-decoration-thickness: 3px;color:green;"
+    'style': "text-decoration-line: underline; text-decoration-color: green;text-decoration-thickness: "
+             "3px;color:green;",
+    'disable_tags': False
 }
 
 

@@ -386,3 +386,134 @@ class TestTermEntity(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('tags', response.data)
         self.assertIn('hasMore', response.data)
+
+    @override_settings(WAGTAILTERMS={'disable_tags': True})
+    def test_disable_tags_setting(self):
+        """Test that the tags functionality can be completely disabled via settings"""
+        # Test that tags endpoint returns 404 when tags are disabled
+        self.client.login(username="editor", password="pass")
+        response = self.client.get(reverse("wagtailterms:terms-tags"))
+        self.assertEqual(response.status_code, 404)
+
+        # Test that terms list endpoint doesn't include tags when disabled
+        response = self.client.get(reverse("wagtailterms:terms-list"))
+        self.assertEqual(response.status_code, 200)
+        for term in response.data['results']:
+            self.assertNotIn('tags', term)
+
+        # Test that tag filtering is ignored when tags are disabled
+        with self.captureOnCommitCallbacks(execute=True):
+            # Add test tags (these should be ignored in the response)
+            self.term1.tags.add("test-tag")
+            self.term1.save()
+
+        response = self.client.get(f"{reverse('wagtailterms:terms-list')}?tags=test-tag")
+        self.assertEqual(response.status_code, 200)
+        # Should get all visible terms since tag filtering is disabled
+        self.assertEqual(len(response.data['results']), 3)  # All live terms
+
+    @override_settings(WAGTAILTERMS={'disable_tags': False})
+    def test_tags_not_disabled(self):
+        """Test that tags functionality works normally when not disabled"""
+        # Test that tags endpoint works
+        self.client.login(username="editor", password="pass")
+        response = self.client.get(reverse("wagtailterms:terms-tags"))
+        self.assertEqual(response.status_code, 200)
+
+        # Test that terms list includes tags
+        with self.captureOnCommitCallbacks(execute=True):
+            self.term1.tags.add("test-tag")
+            self.term1.save()
+
+        response = self.client.get(reverse("wagtailterms:terms-list"))
+        self.assertEqual(response.status_code, 200)
+        # Find the term we tagged and verify it has tags
+        tagged_term = next(term for term in response.data['results'] if term['term'] == self.term1.term)
+        self.assertIn('tags', tagged_term)
+        self.assertIn('test-tag', tagged_term['tags'])
+
+        # Test that tag filtering works
+        response = self.client.get(f"{reverse('wagtailterms:terms-list')}?tags=test-tag")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['term'], self.term1.term)
+
+    def test_api_response_format(self):
+        """Test that the API response format matches the expected structure"""
+        # Setup some test data
+        with self.captureOnCommitCallbacks(execute=True):
+            self.term1.tags.clear()
+            self.term1.tags.add("test-tag-1", "test-tag-2")
+            self.term1.save()
+
+        # Test list response format with tags enabled
+        response = self.client.get(reverse("wagtailterms:terms-list"))
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify response structure
+        required_fields = ['count', 'total_pages', 'current_page', 'next', 'previous', 'results']
+        for field in required_fields:
+            self.assertIn(field, response.data)
+
+        # Verify term format in results
+        result = response.data['results'][0]
+        required_term_fields = ['term', 'definition', 'id', 'tags']
+        for field in required_term_fields:
+            self.assertIn(field, result)
+
+        # Test single term response format
+        response = self.client.get(f"{reverse('wagtailterms:terms-list')}{self.term1.id}/")
+        self.assertEqual(response.status_code, 200)
+        for field in ['term', 'definition', 'id', 'tags']:
+            self.assertIn(field, response.data)
+
+        # Test response format with tags disabled
+        with self.settings(WAGTAILTERMS={'disable_tags': True}):
+            response = self.client.get(reverse("wagtailterms:terms-list"))
+            self.assertEqual(response.status_code, 200)
+            
+            # Results should have all fields except tags
+            result = response.data['results'][0]
+            self.assertIn('term', result)
+            self.assertIn('definition', result)
+            self.assertIn('id', result)
+            self.assertNotIn('tags', result)
+
+            # Single term response should also not have tags
+            response = self.client.get(f"{reverse('wagtailterms:terms-list')}{self.term1.id}/")
+            self.assertEqual(response.status_code, 200)
+            self.assertNotIn('tags', response.data)
+
+    def test_tags_endpoint_format(self):
+        """Test the tags endpoint response format and behavior"""
+        self.client.login(username="editor", password="pass")
+        
+        # Setup test data with varying tag counts
+        with self.captureOnCommitCallbacks(execute=True):
+            self.term1.tags.clear()
+            self.term2.tags.clear()
+            self.term3.tags.clear()
+            
+            # Add tags with different counts
+            for term in [self.term1, self.term2, self.term3]:
+                term.tags.add("common-tag")
+            self.term1.tags.add("unique-tag")
+            
+            for term in [self.term1, self.term2, self.term3]:
+                term.save()
+
+        # Test tags endpoint format
+        response = self.client.get(reverse("wagtailterms:terms-tags"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('tags', response.data)
+        self.assertIn('hasMore', response.data)
+        
+        # Verify tag count accuracy
+        tags_dict = {tag['name']: tag['count'] for tag in response.data['tags']}
+        self.assertEqual(tags_dict['common-tag'], 3)
+        self.assertEqual(tags_dict['unique-tag'], 1)
+
+        # Test response when tags are disabled
+        with self.settings(WAGTAILTERMS={'disable_tags': True}):
+            response = self.client.get(reverse("wagtailterms:terms-tags"))
+            self.assertEqual(response.status_code, 404)

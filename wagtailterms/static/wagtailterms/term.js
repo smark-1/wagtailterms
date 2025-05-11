@@ -61,6 +61,7 @@ class TermSource extends window.React.Component {
                                             <div id="term-selector-popup-search-buttons-frame" class="listing results" style="min-height: 400px; max-height: 60vh; overflow-y: auto; margin-top: 10px;"></div>
                                         </div>
 
+                                        ${!WAGTAIL_TERM_DISABLE_TAGS ? `
                                         <div class="w-field__wrapper" style="flex: 0 0 300px; max-width: 300px;">
                                             <div class="w-field w-field--tag_field w-field--admin_tag_widget" data-field>
                                                 <label class="w-field__label">Filter by Tags</label>
@@ -69,6 +70,7 @@ class TermSource extends window.React.Component {
                                                 </div>
                                             </div>
                                         </div>
+                                        ` : ''}
                                 </form>
                             </section>
                         </div>
@@ -250,7 +252,7 @@ class TermSource extends window.React.Component {
         if (searchQuery) {
             url += `&q=${searchQuery}`;
         }
-        if (this.state.selectedTags.size > 0) {
+        if (!WAGTAIL_TERM_DISABLE_TAGS && this.state.selectedTags.size > 0) {
             const tags = Array.from(this.state.selectedTags);
             url += tags.map(tag => `&tags=${encodeURIComponent(tag)}`).join('');
         }
@@ -274,6 +276,7 @@ class TermSource extends window.React.Component {
                         item.definition) : 
                     ''}
             </td>
+            ${!WAGTAIL_TERM_DISABLE_TAGS ? `
             <td style="padding: 8px; border-bottom: 1px solid var(--w-color-border-field);">
                 ${item.tags && item.tags.length > 0 
                     ? item.tags.map(tag => 
@@ -281,9 +284,27 @@ class TermSource extends window.React.Component {
                     ).join(' ')
                     : ''}
             </td>
+            ` : ''}
         </tr>
     `
 
+    renderTermsTable = (terms) => `
+        <table class="listing" style="width: 100%;">
+            <thead>
+                <tr class="table-headers">
+                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: ${WAGTAIL_TERM_DISABLE_TAGS ? '30%' : '20%'};">Term</th>
+                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: ${WAGTAIL_TERM_DISABLE_TAGS ? '70%' : '50%'};">Definition</th>
+                    ${!WAGTAIL_TERM_DISABLE_TAGS ? `
+                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 30%;">Tags</th>
+                    ` : ''}
+                </tr>
+            </thead>
+            <tbody>
+                ${terms.map(item => this.renderTermRow(item)).join('')}
+            </tbody>
+        </table>
+    `
+    
     renderPaginationControls = (data) => {
         const totalCount = data.count;
         const totalPages = data.total_pages;
@@ -323,21 +344,6 @@ class TermSource extends window.React.Component {
         </div>
         `
     }
-
-    renderTermsTable = (terms) => `
-        <table class="listing" style="width: 100%;">
-            <thead>
-                <tr class="table-headers">
-                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 20%;">Term</th>
-                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 50%;">Definition</th>
-                    <th style="padding: 8px; text-align: left; border-bottom: 2px solid var(--w-color-border-field); width: 30%;">Tags</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${terms.map(item => this.renderTermRow(item)).join('')}
-            </tbody>
-        </table>
-    `
 
     updateTermsList = (data, append) => {
         const frame = document.getElementById("term-selector-popup-search-buttons-frame");
@@ -448,13 +454,16 @@ class TermSource extends window.React.Component {
             searchBox.onkeyup = this.handleSearchInput;
         }
 
-        const tagListDiv = document.getElementById("tag-list");
-        if (tagListDiv) {
-            tagListDiv.addEventListener('scroll', this.handleTagScroll);
+        if (!WAGTAIL_TERM_DISABLE_TAGS) {
+            const tagListDiv = document.getElementById("tag-list");
+            if (tagListDiv) {
+                tagListDiv.addEventListener('scroll', this.handleTagScroll);
+            }
+            // Run the initial tag search
+            this.loadInitialTags();
         }
 
-        // Run initial searches
-        this.loadInitialTags();
+        // Run initial terms search
         this.getSearchTerms(1, false);
     }
 
@@ -474,9 +483,11 @@ class TermSource extends window.React.Component {
     componentWillUnmount() {
         // Clean up modal and event listeners when component unmounts
         const modal = document.getElementById('term-selector-modal');
-        const tagListDiv = document.getElementById("tag-list");
-        if (tagListDiv) {
-            tagListDiv.removeEventListener('scroll', this.handleTagScroll);
+        if (!WAGTAIL_TERM_DISABLE_TAGS) {
+            const tagListDiv = document.getElementById("tag-list");
+            if (tagListDiv) {
+                tagListDiv.removeEventListener('scroll', this.handleTagScroll);
+            }
         }
         if (modal) {
             modal.remove();
