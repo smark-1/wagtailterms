@@ -42,6 +42,10 @@ class TermViewSet(ReadOnlyModelViewSet):
         # Apply tag filters if provided - require ALL tags to match
         tags_objects = Tag.objects.filter(name__in=tags)
         if tags_objects:
+            # Using a loop to filter by each tag can lead to multiple JOINs and may impact performance when many tags
+            # are involved. However, alternative approaches can involve multiple queries and complexity and don't
+            # work with wagtail search. Such as using Q objects or annotations. Also, tag filtering more often than
+            # not will be a small number of tags.
             for tag in tags_objects:
                 queryset = queryset.filter(tags=tag)
 
