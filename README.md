@@ -260,3 +260,4 @@ On hover
 - Remove popup-js dependency
 - Add pagination to the terms list
 - Improve search to search terms and definitions
+- Add setting to turn off tagging

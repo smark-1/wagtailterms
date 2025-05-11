@@ -9,8 +9,10 @@ from .models import Term
 from .permissions import CanAccessTags
 from .serializers import TermSerializer
 
+from .default_settings import get_setting
 from wagtail.search.backends import get_search_backend
 
+from django.http import Http404
 class TermPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'page_size'
@@ -39,15 +41,18 @@ class TermViewSet(ReadOnlyModelViewSet):
         if not self.request.user.is_staff:
             queryset = queryset.filter(live=True)
             
-        # Apply tag filters if provided - require ALL tags to match
-        tags_objects = Tag.objects.filter(name__in=tags)
+        tags_objects = []
+        if not get_setting('disable_tags'):
+            # Apply tag filters if provided - require ALL tags to match
+            tags_objects = Tag.objects.filter(name__in=tags)
         if tags_objects:
-            # Count matching tags per term and filter for terms that match all tags
-            queryset = queryset.annotate(
-                matching_tags=models.Count('tagged_terms__tag', 
-                                         filter=models.Q(tagged_terms__tag__in=tags_objects))
-            ).filter(matching_tags=len(tags_objects))
-            
+            # Using a loop to filter by each tag can lead to multiple JOINs and may impact performance when many tags
+            # are involved. However, alternative approaches can involve multiple queries and complexity and don't
+            # work with wagtail search. Such as using Q objects or annotations. Also, tag filtering more often than
+            # not will be a small number of tags.
+            for tag in tags_objects:
+                queryset = queryset.filter(tags=tag)
+
         # Apply search if provided
         if q:
             queryset = get_search_backend().search(q, queryset,operator="or")
@@ -55,6 +60,8 @@ class TermViewSet(ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'])
     def tags(self, request):
+        if get_setting('disable_tags'):
+            raise Http404()
         permission_checker = CanAccessTags()
         # Pass 'self' (the view instance) to provide the permission checker with access to the view's context or attributes,
         # which might be necessary for evaluating permissions.

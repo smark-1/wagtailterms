@@ -179,4 +179,5 @@ WAGTAILSEARCH_BACKENDS = {
 # e.g. in notification emails. Don't include '/admin' or a trailing slash
 WAGTAILADMIN_BASE_URL = "http://example.com"
 
-# WAGTAILTERMS = {'icon':"bin",'menu_order':900,'style':'text-decoration-line: underline; text-decoration-color: pink;text-decoration-thickness: 4px;color:blue;'}
+# WAGTAILTERMS = {'icon':"bin",'menu_order':900,'style':'text-decoration-line: underline; text-decoration-color:
+# pink;text-decoration-thickness: 4px;color:blue;', 'disable_tags': False}
