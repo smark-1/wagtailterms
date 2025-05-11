@@ -356,6 +356,7 @@ When tags are disabled (`disable_tags` is `True`), this endpoint will return a 4
 - Add pagination to the terms list
 - Improve search to search terms and definitions
 - Added `disable_tags` setting to completely disable the tagging functionality
+- Add formal wagtail 7.0 support
 
 ### 0.1.3
 - Added setting to change frontend styles

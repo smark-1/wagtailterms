@@ -9,10 +9,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    name: "Run Tests"
     strategy:
-      max-parallel: 4
+      max-parallel: 5
       matrix:
-        python-version: ["3.9", "3.12"]
+        python-version: ["3.9", "3.12", "3.11", "3.10","3.13"]
 
     steps:
       - uses: actions/checkout@v3
