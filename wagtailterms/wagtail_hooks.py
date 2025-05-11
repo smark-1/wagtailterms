@@ -99,7 +99,7 @@ class TermEntityElementHandler(InlineEntityElementHandler):
                     "term": term.term,
                     "definition": term.definition,
                     "id": term.id,
-                    "tags": list(term.tags.names()),
+                    "tags": [] if get_setting("disable_tags") else list(term.tags.names()),
                 }
             }
         except Term.DoesNotExist:
