@@ -56,6 +56,11 @@ Click in the admin side bar Terms -> Add New
 <img width="50%" src="./example/images/create_term_2.png">
 </p>
 
+With tagging
+<p align="center" width="100%">
+<img width="50%" src="example/images/create_term_with_tags.jpeg">
+</p>
+
 ### Use term entity in editor
 
 <p align="center" width="100%">
@@ -65,7 +70,7 @@ Click in the admin side bar Terms -> Add New
 Search for term
 
 <p align="center" width="100%">
-<img width="50%" src="./example/images/add_term_2.png">
+<img width="50%" src="./example/images/search_term_2.png">
 </p>
 <p align="center" width="100%">
 <img width="50%" src="./example/images/search_term.png">
@@ -77,6 +82,10 @@ Select term
 <img width="50%" src="./example/images/add_term_3.png">
 </p>
 
+Without tags
+<p align="center" width="100%">
+<img width="50%" src="./example/images/add_term_no_tags.png">
+</p>
 Entity displayed in editor
 
 <p align="center" width="100%">
