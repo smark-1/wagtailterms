@@ -42,12 +42,9 @@ class TermViewSet(ReadOnlyModelViewSet):
         # Apply tag filters if provided - require ALL tags to match
         tags_objects = Tag.objects.filter(name__in=tags)
         if tags_objects:
-            # Count matching tags per term and filter for terms that match all tags
-            queryset = queryset.annotate(
-                matching_tags=models.Count('tagged_terms__tag', 
-                                         filter=models.Q(tagged_terms__tag__in=tags_objects))
-            ).filter(matching_tags=len(tags_objects))
-            
+            for tag in tags_objects:
+                queryset = queryset.filter(tags=tag)
+
         # Apply search if provided
         if q:
             queryset = get_search_backend().search(q, queryset,operator="or")
