@@ -32,12 +32,14 @@ All configurations for wagtailterms are done in the settings.py file in a dictio
 -  icon - The icon for the terms. It is used in the draftail editor and for the viewset. All the icons available for [wagtail](https://docs.wagtail.org/en/latest/advanced_topics/icons.html) are valid options
 - menu_order - Change the position of the terms snippet in the menu.
 - style - Change the default css inline-style of the term
+- disable_tags - Set to True to disable the tagging functionality. This removes the tag filtering interface from the term selector and hides tag-related features.
 
 ```python
     WAGTAILTERMS = {
         'icon': 'snippet',
         'menu_order': 200,
         'style': "text-decoration-line: underline; text-decoration-color: green;text-decoration-thickness: 3px;color:green;",
+        'disable_tags': False,  # Set to True to disable tagging functionality
     }
 ```
 
@@ -99,7 +101,18 @@ Terms can be tagged to help organize and filter them. When creating or editing a
 
 When hovering over a term in both the editor and frontend, tags will be displayed in the tooltip along with the term definition.
 
-The REST API responses now include tags for each term:
+You can disable the tagging functionality completely by setting `disable_tags` to `True` in your WAGTAILTERMS settings:
+
+```python
+WAGTAILTERMS = {
+    # ...other settings...
+    'disable_tags': True,
+}
+```
+
+This will remove the tag filtering interface from the term selector and hide all tag-related features.
+
+The REST API responses include tags for each term when tagging is enabled:
 
 ```json
 {
@@ -215,40 +228,122 @@ On hover
 </p>
 
 ## REST API
-`/api/terms/` will return:
+### Terms Endpoints
+`/api/terms/` will return a paginated list of terms. The response format depends on your `disable_tags` setting:
 
-    [
-      {
-          "term": "term 1",
-          "definition": "<p data-block-key=\"51h82\">this is term 1</p>",
-          "id": 1
-      },
+The list endpoint supports the following query parameters:
+- `page`: The page number to retrieve (e.g., `/api/terms/?page=2`)
+- `q`: Search terms by name and definition (e.g., `/api/terms/?q=example`)
+- `tags`: Filter terms by one or more tags. Can be used multiple times to filter by multiple tags (e.g., `/api/terms/?tags=python&tags=django`)
+
+When `disable_tags` is `False` (default):
+```json
+{
+    "count": 3,
+    "total_pages": 1,
+    "current_page": 1,
+    "next": null,
+    "previous": null,
+    "results": [
         {
-          "term": "example 2",
-          "definition": "<p data-block-key=\"83b17\">this is another example</p>",
-          "id": 2
-      }
+            "term": "Term 1",
+            "definition": "<p>This is a definition for term 1</p>",
+            "id": 1,
+            "tags": ["tag1", "tag2", "tag3"]
+        },
+        {
+            "term": "Example term",
+            "definition": "<p>Lorem ipsum dolor sit amet</p>",
+            "id": 2,
+            "tags": ["tag2", "tag4"]
+        }
     ]
+}
+```
 
-/api/terms/1/ will return:
+When `disable_tags` is `True`:
+```json
+{
+    "count": 3,
+    "total_pages": 1,
+    "current_page": 1,
+    "next": null,
+    "previous": null,
+    "results": [
+        {
+            "term": "Term 1",
+            "definition": "<p>This is a definition for term 1</p>",
+            "id": 1
+        },
+        {
+            "term": "Example term",
+            "definition": "<p>Lorem ipsum dolor sit amet</p>",
+            "id": 2
+        }
+    ]
+}
+```
 
-    {
-        "term": "term 1",
-        "definition": "<p data-block-key=\"51h82\">this is term 1</p>",
-        "id": 1
-    }
+The list endpoint supports pagination through query parameters:
+- `page`: The page number to retrieve (e.g., `/api/terms/?page=2`)
+- Response includes:
+  - `count`: Total number of terms
+  - `total_pages`: Total number of pages
+  - `current_page`: Current page number
+  - `next`: URL for the next page (null if on last page)
+  - `previous`: URL for the previous page (null if on first page)
+  - `results`: Array of terms for the current page
+
+Fetching a single term with `/api/terms/1/` will return:
+
+With tags enabled:
+```json
+{
+    "term": "term 1",
+    "definition": "<p>this is term 1</p>",
+    "id": 1,
+    "tags": ["tag1", "tag2"]
+}
+```
+
+With tags disabled:
+```json
+{
+    "term": "term 1",
+    "definition": "<p>this is term 1</p>",
+    "id": 1
+}
+```
+
+### Tags Endpoint
+When tags are enabled (`disable_tags` is `False`), you can use `/api/terms/tags/` to get a list of all available tags:
+
+```json
+{
+    "tags": [
+        {
+            "name": "tag1",
+            "count": 5
+        },
+        {
+            "name": "tag2",
+            "count": 3
+        }
+    ],
+    "hasMore": false
+}
+```
+
+The tags endpoint supports pagination through the `page` query parameter:
+- `/api/terms/tags/?page=1`
+- Each tag object includes:
+  - `name`: The name of the tag
+  - `count`: Number of terms using this tag
+- `hasMore`: Indicates if there are more pages of tags available
+
+When tags are disabled (`disable_tags` is `True`), this endpoint will return a 404 response.
 
 ## Changelog
-### 0.1.1
-- added settings to change the icon and menu order.
-
-### 0.1.2
-- fixed term search form wider than modal
-- Add dark mode support
-
-### 0.1.3
-- Added setting to change frontend styles
-- Added quick start template for default frontend implementation
 
 ### 0.2.0
 - Added tags support for terms
@@ -260,4 +355,15 @@ On hover
 - Remove popup-js dependency
 - Add pagination to the terms list
 - Improve search to search terms and definitions
-- Add setting to turn off tagging
+- Added `disable_tags` setting to completely disable the tagging functionality
+
+### 0.1.3
+- Added setting to change frontend styles
+- Added quick start template for default frontend implementation
+
+### 0.1.2
+- fixed term search form wider than modal
+- Add dark mode support
+
+### 0.1.1
+- added settings to change the icon and menu order.
