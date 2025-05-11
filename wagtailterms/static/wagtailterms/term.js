@@ -83,6 +83,11 @@ class TermSource extends window.React.Component {
     showModal = () => {
         const modal = document.getElementById('term-selector-modal');
         if (modal) {
+            // Add backdrop
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade in';
+            document.body.appendChild(backdrop);
+
             modal.style.display = 'block';
             modal.classList.add('in');
             modal.setAttribute('aria-hidden', 'false');
@@ -94,6 +99,12 @@ class TermSource extends window.React.Component {
     hideModal = () => {
         const modal = document.getElementById('term-selector-modal');
         if (modal) {
+            // Remove backdrop
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.remove();
+            }
+
             modal.style.display = 'none';
             modal.classList.remove('in');
             modal.setAttribute('aria-hidden', 'true');
