@@ -517,3 +517,25 @@ class TestTermEntity(APITestCase):
         with self.settings(WAGTAILTERMS={'disable_tags': True}):
             response = self.client.get(reverse("wagtailterms:terms-tags"))
             self.assertEqual(response.status_code, 404)
+
+    def test_termviewset_panels(self):
+        """Test that TermViewSet panels are correctly configured based on disable_tags setting"""
+        from wagtailterms.wagtail_hooks import TermViewSet
+
+        # Test with tags enabled (default)
+        with self.settings(WAGTAILTERMS={'disable_tags': False}):
+            viewset = TermViewSet()
+            panels = viewset.panels
+            self.assertEqual(len(panels), 3)  # Should have term, definition, and tags panels
+            self.assertTrue(any(p.field_name == "tags" for p in panels))
+            self.assertTrue(any(p.field_name == "term" for p in panels))
+            self.assertTrue(any(p.field_name == "definition" for p in panels))
+
+        # Test with tags disabled
+        with self.settings(WAGTAILTERMS={'disable_tags': True}):
+            viewset = TermViewSet()
+            panels = viewset.panels
+            self.assertEqual(len(panels), 2)  # Should only have term and definition panels
+            self.assertFalse(any(p.field_name == "tags" for p in panels))
+            self.assertTrue(any(p.field_name == "term" for p in panels))
+            self.assertTrue(any(p.field_name == "definition" for p in panels))
