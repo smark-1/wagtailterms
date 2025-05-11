@@ -116,11 +116,14 @@ class TermEntityElementHandler(InlineEntityElementHandler):
 class TermViewSet(SnippetViewSet):
     model = Term
 
-    panels = [
-        FieldPanel("term"),
-        FieldPanel("definition"),
-        FieldPanel("tags"),
-    ]
+    @property
+    def panels(self):
+        panel_items = [FieldPanel("term"),
+        FieldPanel("definition")]
+        if not get_setting('disable_tags'):
+            panel_items.append(FieldPanel("tags"))
+        return panel_items
+    
     icon = TERM_ICON
     add_to_admin_menu = True
     menu_label = "Terms"
