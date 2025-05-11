@@ -15,6 +15,7 @@ class TermSerializer(TaggitSerializer, serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Add the 'tags' field only if the 'disable_tags' setting is not enabled.
         if not get_setting('disable_tags'):
             self.fields['tags'] = TagListSerializerField()
 
