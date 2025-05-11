@@ -4,7 +4,7 @@ from setuptools import setup
 from os import path
 
 install_requires = [
-    "wagtail>=5.2",
+    "wagtail>=6.2",
     "djangorestframework>=3.12.0",
 ]
 
@@ -43,9 +43,16 @@ setup(
             "Programming Language :: Python :: 3.10",
             "Programming Language :: Python :: 3.11",
             "Programming Language :: Python :: 3.12",
+            "Programming Language :: Python :: 3.13",
             "Framework :: Django",
+            "Framework :: Django :: 4.2",
+            "Framework :: Django :: 5.0",
+            "Framework :: Django :: 5.1",
+            "Framework :: Django :: 5.2",
             "Framework :: Wagtail",
-            "Framework :: Wagtail :: 5",
-            "Framework :: Wagtail :: 6",
+            "Framework :: Wagtail :: 6.2",
+            "Framework :: Wagtail :: 6.3",
+            "Framework :: Wagtail :: 6.4",
+            "Framework :: Wagtail :: 7.0",
         ],
 )
