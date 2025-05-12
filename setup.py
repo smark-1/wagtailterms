@@ -50,9 +50,7 @@ setup(
             "Framework :: Django :: 5.1",
             "Framework :: Django :: 5.2",
             "Framework :: Wagtail",
-            "Framework :: Wagtail :: 6.2",
-            "Framework :: Wagtail :: 6.3",
-            "Framework :: Wagtail :: 6.4",
-            "Framework :: Wagtail :: 7.0",
+            "Framework :: Wagtail :: 6",
+            "Framework :: Wagtail :: 7",
         ],
 )
