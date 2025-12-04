@@ -354,6 +354,10 @@ When tags are disabled (`disable_tags` is `True`), this endpoint will return a 4
 
 ## Changelog
 
+### 0.2.1
+- Add Wagtail 7.2.x support
+- Add Wagtail 7.1.x support
+
 ### 0.2.0
 - Added tags support for terms
 - Added tag filtering in term selector
@@ -365,7 +369,7 @@ When tags are disabled (`disable_tags` is `True`), this endpoint will return a 4
 - Add pagination to the terms list
 - Improve search to search terms and definitions
 - Added `disable_tags` setting to completely disable the tagging functionality
-- Add formal wagtail 7.0 support
+- Add formal wagtail 7.0.x support
 
 ### 0.1.3
 - Added setting to change frontend styles
