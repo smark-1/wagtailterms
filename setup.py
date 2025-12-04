@@ -4,7 +4,7 @@ from setuptools import setup
 from os import path
 
 install_requires = [
-    "wagtail>=6.2",
+    "wagtail>=6.3",
     "djangorestframework>=3.12.0",
 ]
 
@@ -39,11 +39,11 @@ setup(
             "License :: OSI Approved :: MIT License",
             "Operating System :: OS Independent",
             "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3.9",
             "Programming Language :: Python :: 3.10",
             "Programming Language :: Python :: 3.11",
             "Programming Language :: Python :: 3.12",
             "Programming Language :: Python :: 3.13",
+            "Programming Language :: Python :: 3.14",
             "Framework :: Django",
             "Framework :: Django :: 4.2",
             "Framework :: Django :: 5.0",
