@@ -1,3 +1,4 @@
+from django.core.management import call_command
 from django.test import override_settings
 from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
@@ -234,9 +235,12 @@ class TestTermEntity(APITestCase):
             self.term2.save()
         
         # Reindex to ensure search index is up to date
-        get_search_backend().reset_index()
-        get_search_backend().add_type(Term)
-        
+        call_command("update_index", verbosity=0)
+
+        backend = get_search_backend()
+        if hasattr(backend, "add_type"):  # Wagtail 5
+            backend.add_type(Term)
+
         response = self.client.get(
                 f"{reverse('wagtailterms:terms-list')}?tags=test-tag"
         )
@@ -261,10 +265,15 @@ class TestTermEntity(APITestCase):
             self.term2.save()
         
         # Reindex to ensure search index is up to date
-        get_search_backend().reset_index()
-        get_search_backend().add_type(Term)
-        get_search_backend().refresh_index()
-        
+        call_command("update_index", verbosity=0)
+        backend = get_search_backend()
+        if hasattr(backend, "add_type"):  # Wagtail 5
+            backend.add_type(Term)
+        if hasattr(backend, "refresh_indexes"):
+            backend.refresh_indexes()  # Wagtail 7.2+
+        elif hasattr(backend, "refresh_index"):
+            backend.refresh_index()  # Wagtail 5.x – 7.1
+
         response = self.client.get(
                 f"{reverse('wagtailterms:terms-list')}?tags=tag1&tags=tag2"
         )
