@@ -57,6 +57,10 @@ class TestTermEntity(APITestCase):
                     live=False
             )
 
+        backend = get_search_backend()
+        if hasattr(backend, "refresh_index"):
+            backend.refresh_index()
+
     def test_can_view_term(self):
         """test that a term can be viewed with the rest api"""
         response = self.client.get(reverse("wagtailterms:terms-list"))
