@@ -69,8 +69,8 @@ class TestTermEntity(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data['results']), 3)
 
-        self.assertEqual(response.data['results'][0]["term"], "Test Term")
-        self.assertEqual(response.data['results'][0]["definition"], "Definition with special keyword xuqwn")
+        self.assertEqual(response.data['results'][1]["term"], "Test Term")
+        self.assertEqual(response.data['results'][1]["definition"], "Definition with special keyword xuqwn")
 
         # try view terms when logged in as normal user
         self.client.login(username="user", password="pass")

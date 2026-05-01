@@ -20,13 +20,17 @@ class Term(index.Indexed, DraftStateMixin, RevisionMixin, LockableMixin, Cluster
         index.AutocompleteField("term", partial_match=True),
         index.SearchField("term",boost=2, partial_match=True),
         index.SearchField("definition",boost=1),
-        # Enables filtering of terms by their associated tag IDs in search queries.
-        index.FilterField("tag_id"),
+
         index.FilterField("live"),
         index.RelatedFields('tags', [
             index.SearchField("name", partial_match=False),
+            # Enables filtering of terms by their associated tag IDs in search queries.
+            index.FilterField("id"),
         ])
     ]
 
     def __str__(self):
         return self.term
+
+    class Meta:
+        ordering = ["term"]
