@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: "Tests: Py ${{ matrix.python-version }} / Wagtail ${{ matrix.wagtail-version }}"
+    name: "Tests: Py ${{ matrix.python-version }} / Wagtail ${{ matrix.wagtail-version }} / Django ${{ matrix.django-version }}"
     strategy:
       # Allows all jobs to finish even if one fails
       fail-fast: false
