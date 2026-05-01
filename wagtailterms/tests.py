@@ -16,14 +16,14 @@ class TestTermEntity(APITestCase):
         # We create the groups here since in tests the default Wagtail groups might not exist
         cls.editor_group = Group.objects.get(name='Editors')
         cls.moderator_group = Group.objects.get(name='Moderators')
-        
+
         cls.admin_user = get_user_model().objects.create_superuser(
                 "admin", password="pass"
         )
         cls.normal_user = get_user_model().objects.create_user("user", password="pass")
         cls.editor_user = get_user_model().objects.create_user("editor", password="pass")
         cls.moderator_user = get_user_model().objects.create_user("moderator", password="pass")
-        
+
         # Add users to their respective groups
         cls.editor_user.groups.add(cls.editor_group)
         cls.moderator_user.groups.add(cls.moderator_group)
@@ -31,29 +31,29 @@ class TestTermEntity(APITestCase):
         with cls.captureOnCommitCallbacks(execute=True):  # Fixes issue with wagtail 6.4 do to "Background tasks run
             # at end of current transaction" https://docs.wagtail.org/en/latest/releases/6.4.html#background-tasks-run-at-end-of-current-transaction
             cls.term1 = Term.objects.create(
-                    term="Test Term", 
-                    definition="Definition with special keyword xuqwn", 
+                    term="Test Term",
+                    definition="Definition with special keyword xuqwn",
                     live=True
             )
             cls.term2 = Term.objects.create(
-                    term="Test Term 2", 
-                    definition="Another definition without special words", 
+                    term="Test Term 2",
+                    definition="Another definition without special words",
                     live=True
             )
             cls.term3 = Term.objects.create(
-                    term="Special Term", 
-                    definition="Test Definition 3", 
+                    term="Special Term",
+                    definition="Test Definition 3",
                     live=True
             )
             # not live terms should not be visible to non staff
             cls.term4 = Term.objects.create(
-                    term="Test Term 4", 
-                    definition="Test Definition 4 with xuqwn", 
+                    term="Test Term 4",
+                    definition="Test Definition 4 with xuqwn",
                     live=False
             )
             cls.term5 = Term.objects.create(
-                    term="Test Term 5", 
-                    definition="Test Definition 5", 
+                    term="Test Term 5",
+                    definition="Test Definition 5",
                     live=False
             )
 
@@ -140,13 +140,13 @@ class TestTermEntity(APITestCase):
             self.term1.tags.clear()
             self.term2.tags.clear()
             self.term3.tags.clear()
-            
+
             # Add test tags
             self.term1.tags.add("test-tag")
             self.term2.tags.add("other-tag")
             self.term1.save()
             self.term2.save()
-        
+
         # Test filtering by tag
         response = self.client.get(
                 f"{reverse('wagtailterms:terms-list')}?tags=test-tag"
@@ -171,7 +171,11 @@ class TestTermEntity(APITestCase):
         with self.captureOnCommitCallbacks(execute=True):
             self.term1.tags.add("searchable-tag")
             self.term1.save()
-        
+
+        backend = get_search_backend()
+        if hasattr(backend, "refresh_index"):
+            backend.refresh_index()
+
         response = self.client.get(
                 f"{reverse('wagtailterms:terms-list')}?q=searchable"
         )
@@ -227,13 +231,13 @@ class TestTermEntity(APITestCase):
             self.term1.tags.clear()
             self.term2.tags.clear()
             self.term3.tags.clear()
-            
+
             # Add new tags for testing
             self.term1.tags.add("test-tag")
             self.term1.save()
             self.term2.tags.add("test-tag")
             self.term2.save()
-        
+
         # Reindex to ensure search index is up to date
         call_command("update_index", verbosity=0)
 
@@ -257,13 +261,13 @@ class TestTermEntity(APITestCase):
             self.term1.tags.clear()
             self.term2.tags.clear()
             self.term3.tags.clear()
-            
+
             # Add new tags for testing
             self.term1.tags.add("tag1", "tag2")
             self.term1.save()
             self.term2.tags.add("tag1")
             self.term2.save()
-        
+
         # Reindex to ensure search index is up to date
         call_command("update_index", verbosity=0)
         backend = get_search_backend()
@@ -287,13 +291,13 @@ class TestTermEntity(APITestCase):
         """Test the tags endpoint"""
         # Login as editor user to access the endpoint
         self.client.login(username="editor", password="pass")
-        
+
         with self.captureOnCommitCallbacks(execute=True):
             self.term1.tags.add("tag1", "tag2")
             self.term1.save()
             self.term2.tags.add("tag1")
             self.term2.save()
-        
+
         response = self.client.get(reverse("wagtailterms:terms-tags"))
         self.assertEqual(response.status_code, 200)
         self.assertIn('tags', response.data)
@@ -305,19 +309,19 @@ class TestTermEntity(APITestCase):
         """Test that tags endpoint pagination works"""
         # Login as editor user to access the endpoint
         self.client.login(username="editor", password="pass")
-        
+
         # Add enough tags to trigger pagination
         with self.captureOnCommitCallbacks(execute=True):
             for i in range(60):
                 self.term1.tags.add(f"tag{i}")
             self.term1.save()
-        
+
         response = self.client.get(reverse("wagtailterms:terms-tags"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data['tags']), 50)  # default page size
         self.assertIn('hasMore', response.data)  # Ensure 'hasMore' is present
         self.assertTrue(response.data['hasMore'])
-        
+
         # Check second page
         response = self.client.get(f"{reverse('wagtailterms:terms-tags')}?page=2")
         self.assertEqual(response.status_code, 200)
@@ -377,13 +381,13 @@ class TestTermEntity(APITestCase):
     def test_tags_endpoint_pagination(self):
         """Test that the tags endpoint pagination works correctly"""
         self.client.login(username="editor", password="pass")
-        
+
         # Create some tags for pagination
         with self.captureOnCommitCallbacks(execute=True):
             for i in range(5):
                 self.term1.tags.add(f"tag{i}")
             self.term1.save()
-        
+
         # Test default page
         response = self.client.get(reverse("wagtailterms:terms-tags"))
         self.assertEqual(response.status_code, 200)
@@ -458,7 +462,7 @@ class TestTermEntity(APITestCase):
         # Test list response format with tags enabled
         response = self.client.get(reverse("wagtailterms:terms-list"))
         self.assertEqual(response.status_code, 200)
-        
+
         # Verify response structure
         required_fields = ['count', 'total_pages', 'current_page', 'next', 'previous', 'results']
         for field in required_fields:
@@ -480,7 +484,7 @@ class TestTermEntity(APITestCase):
         with self.settings(WAGTAILTERMS={'disable_tags': True}):
             response = self.client.get(reverse("wagtailterms:terms-list"))
             self.assertEqual(response.status_code, 200)
-            
+
             # Results should have all fields except tags
             result = response.data['results'][0]
             self.assertIn('term', result)
@@ -496,18 +500,18 @@ class TestTermEntity(APITestCase):
     def test_tags_endpoint_format(self):
         """Test the tags endpoint response format and behavior"""
         self.client.login(username="editor", password="pass")
-        
+
         # Setup test data with varying tag counts
         with self.captureOnCommitCallbacks(execute=True):
             self.term1.tags.clear()
             self.term2.tags.clear()
             self.term3.tags.clear()
-            
+
             # Add tags with different counts
             for term in [self.term1, self.term2, self.term3]:
                 term.tags.add("common-tag")
             self.term1.tags.add("unique-tag")
-            
+
             for term in [self.term1, self.term2, self.term3]:
                 term.save()
 
@@ -516,7 +520,7 @@ class TestTermEntity(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('tags', response.data)
         self.assertIn('hasMore', response.data)
-        
+
         # Verify tag count accuracy
         tags_dict = {tag['name']: tag['count'] for tag in response.data['tags']}
         self.assertEqual(tags_dict['common-tag'], 3)
