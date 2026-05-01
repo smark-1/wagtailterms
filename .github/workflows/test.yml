@@ -9,11 +9,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: "Run Tests"
+    name: "Tests: Py ${{ matrix.python-version }} / Wagtail ${{ matrix.wagtail-version }}"
     strategy:
-      max-parallel: 5
+      # Allows all jobs to finish even if one fails
+      fail-fast: false
       matrix:
-        python-version: ["3.12", "3.11", "3.10","3.13", "3.14"]
+        python-version: ["3.10" ,"3.11", "3.12", "3.13", "3.14"]
+        wagtail-version: ["6.3", "6.4", "7.0", "7.1", "7.2", "7.3"]
+        django-version: ["4.2", "5.0", "5.1","5.2", "6.0"]
 
     steps:
       - uses: actions/checkout@v3
@@ -25,8 +28,8 @@ jobs:
         run: echo "RELEASE_VERSION=0.0.1" >> $GITHUB_ENV
       - name: Install Dependencies
         run: |
-          pip install Django
-          pip install wagtail
+          pip install "Django~=${{ matrix.django-version }}.0"
+          pip install "wagtail~=${{ matrix.wagtail-version }}.0"
           pip install -e .
       - name: Run Tests
         run: |
