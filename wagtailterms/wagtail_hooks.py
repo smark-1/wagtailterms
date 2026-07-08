@@ -73,8 +73,13 @@ def term_entity_decorator(props):
     return DOM.create_element(
         "span",
         {
-            "style": get_setting('style'),
+            "style": get_setting("style"),
+            "class": get_setting("class"),
             "data-term": props["term"]["id"],
+            "data-tippy-content": f"""
+                <h4>{props["term"]["term"]}</h4>
+                <p>{props["term"]["definition"]}</p>
+            """,
         },
         props["children"],
     )
