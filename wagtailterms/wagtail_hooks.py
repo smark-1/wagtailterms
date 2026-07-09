@@ -7,13 +7,14 @@ from wagtail.admin.rich_text.converters.html_to_contentstate import (
     InlineEntityElementHandler,
 )
 from django.utils.safestring import mark_safe
+from django.utils.text import Truncator
+from django.template.defaultfilters import slugify
 from wagtail.snippets.models import register_snippet
 from wagtail.snippets.views.snippets import SnippetViewSet
 from .default_settings import get_setting
 from .models import Term
 
 TERM_ICON = get_setting('icon')
-
 
 @hooks.register("insert_editor_js")
 def editor_js():
@@ -70,17 +71,38 @@ def term_entity_decorator(props):
     Draft.js ContentState to database HTML.
     Converts the TERM entities into a span tag.
     """
+
+    attrs = {
+        "style": get_setting("style"),
+        "data-term": props["term"]["id"]
+    }
+
+    class_setting = get_setting("class")
+    if class_setting:
+        attrs["class"] = class_setting
+
+    if get_setting("embedded_tooltip"):
+        base_url = get_setting("base_url")
+        if get_setting("as_anchor"):
+            a_block = f"""
+                <a href={base_url+"#"+slugify(props["term"]["term"])} target="_blank">More</a>
+            """
+        else:
+            a_block = f"""
+                <a href={base_url+"/"+slugify(props["term"]["term"])} target="_blank">More</a>
+            """
+
+        max_word_length = get_setting("max_word_length")
+        definition = Truncator(props["term"]["definition"]).words(max_word_length, html=True)
+
+        attrs["data-tippy-content"] = f"""
+            <h4>{props["term"]["term"]}</h4>
+            {definition}
+            {a_block}
+        """
+
     return DOM.create_element(
-        "span",
-        {
-            "style": get_setting("style"),
-            "class": get_setting("class"),
-            "data-term": props["term"]["id"],
-            "data-tippy-content": f"""
-                <h4>{props["term"]["term"]}</h4>
-                <p>{props["term"]["definition"]}</p>
-            """,
-        },
+        "span", attrs,
         props["children"],
     )
 
@@ -128,7 +150,7 @@ class TermViewSet(SnippetViewSet):
         if not get_setting('disable_tags'):
             panel_items.append(FieldPanel("tags"))
         return panel_items
-    
+
     icon = TERM_ICON
     add_to_admin_menu = True
     menu_label = "Terms"
