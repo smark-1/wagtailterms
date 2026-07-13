@@ -47,8 +47,8 @@ def register_term_feature(features):
             control,
             js=[
                 "wagtailterms/term.js",
-                "wagtailterms/popperjs.js",
-                "wagtailterms/tippyjs.js",
+                "wagtailterms/popper.min.js",
+                "wagtailterms/tippy-bundle.umd.min.js",
             ],
         ),
     )
