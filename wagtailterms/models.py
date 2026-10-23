@@ -12,7 +12,7 @@ class WagtailTermTag(TaggedItemBase):
 
 # Create your models here.
 class Term(index.Indexed, DraftStateMixin, RevisionMixin, LockableMixin, ClusterableModel):
-    term = models.CharField(max_length=25)
+    term = models.CharField(max_length=100)
     definition = RichTextField()
     tags = ClusterTaggableManager(through=WagtailTermTag, blank=True)
 
